@@ -128,6 +128,6 @@ For any queries or support, please contact:
 - Email: [your-email@example.com]
 - GitHub: [@abhi963007](https://github.com/abhi963007)
 
----
+------
 
 <p align="center">Made with ❤️ by Nexis Team</p> 
