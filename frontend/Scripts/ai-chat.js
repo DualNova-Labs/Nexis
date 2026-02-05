@@ -1,8 +1,10 @@
 let chatId = null;
 let isProcessing = false;
+let currentChatId = null; // Track current chat being viewed
 
-// Add API base URL and configuration
-const API_URL = `http://${window.location.hostname}:3001`;
+// Get API base URL - works for both local server and direct file access
+const hostname = window.location.hostname || 'localhost';
+const API_URL = `http://${hostname}:3001`;
 const API_CONFIG = {
     headers: {
         'Content-Type': 'application/json',
@@ -19,17 +21,20 @@ async function initializeChat() {
             method: 'POST',
             ...API_CONFIG
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Chat initialized:', data);
-        
+
         if (data.ok) {
             chatId = data.chatId;
-            loadChatHistory();
+            currentChatId = data.chatId;
+            console.log('Chat session started with ID:', chatId);
+            // Refresh history sidebar
+            await loadChatList();
         } else {
             throw new Error(data.error || 'Failed to initialize chat');
         }
@@ -39,67 +44,168 @@ async function initializeChat() {
     }
 }
 
-// Load chat history
-async function loadChatHistory() {
-    if (!chatId) return;
-
+// Load chat list for sidebar
+async function loadChatList() {
     try {
-        const response = await fetch(`${API_URL}/api/ai/chat/history/${chatId}`);
+        const response = await fetch(`${API_URL}/api/ai/chat/list`, {
+            method: 'GET',
+            ...API_CONFIG
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
-        
+        console.log('Chat list loaded:', data);
+
+        if (data.ok && data.chats) {
+            displayChatList(data.chats);
+        }
+    } catch (error) {
+        console.error('Error loading chat list:', error);
+    }
+}
+
+// Display chat list in sidebar
+function displayChatList(chats) {
+    const historyList = document.getElementById('historyList');
+    if (!historyList) return;
+
+    // Keep the title
+    historyList.innerHTML = '<h3 class="history-title">RECENT CHATS</h3>';
+
+    if (chats.length === 0) {
+        historyList.innerHTML += '<p style="color: var(--text-gray); font-size: 14px; padding: 12px;">No chat history yet</p>';
+        return;
+    }
+
+    chats.forEach(chat => {
+        const historyItem = document.createElement('div');
+        historyItem.className = `history-item ${chat.chatId === currentChatId ? 'active' : ''}`;
+        historyItem.onclick = () => loadChat(chat.chatId);
+
+        historyItem.innerHTML = `
+            <i class="material-icons-outlined">chat_bubble_outline</i>
+            <span>${chat.title || 'New Chat'}</span>
+        `;
+
+        historyList.appendChild(historyItem);
+    });
+}
+
+// Load a specific chat
+async function loadChat(selectedChatId) {
+    try {
+        const response = await fetch(`${API_URL}/api/ai/chat/history/${selectedChatId}`, {
+            method: 'GET',
+            ...API_CONFIG
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Chat history loaded:', data);
+
         if (data.ok) {
-            const messagesContainer = document.querySelector('.chat-messages');
-            messagesContainer.innerHTML = ''; // Clear existing messages
-            
-            data.history.forEach(message => {
-                appendMessage(message.content, message.role === 'assistant');
+            // Clear current messages
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = '';
+            messagesContainer.classList.add('has-messages');
+
+            // Set current chat
+            chatId = selectedChatId;
+            currentChatId = selectedChatId;
+
+            // Display all messages
+            data.history.forEach(msg => {
+                appendMessage(msg.content, msg.role === 'assistant');
             });
-            
+
+            // Refresh sidebar to update active state
+            await loadChatList();
+
+            // Scroll to bottom after loading messages
             scrollToBottom();
         }
     } catch (error) {
-        console.error('Error loading history:', error);
-        showError('Failed to load chat history.');
+        console.error('Error loading chat:', error);
+        showError('Failed to load chat history');
     }
+}
+
+// Start new chat
+function startNewChat() {
+    chatId = null;
+    currentChatId = null;
+    const messagesContainer = document.getElementById('chatMessages');
+    messagesContainer.classList.remove('has-messages');
+    messagesContainer.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="material-icons-outlined">auto_awesome</i>
+            </div>
+            <h1 class="empty-state-title">Nexis AI Chatbot</h1>
+            <p class="empty-state-subtitle">Start a conversation to get assistance</p>
+        </div>
+    `;
+    initializeChat();
 }
 
 // Send message
 async function sendMessage() {
     if (isProcessing) return;
 
-    const textarea = document.querySelector('.chat-input');
+    const textarea = document.getElementById('chatInput');
     const message = textarea.value.trim();
-    
+
     if (!message) return;
-    
+
+    // Check if chat is initialized
+    if (!chatId) {
+        showError('Initializing chat...');
+        await initializeChat();
+        if (!chatId) {
+            showError('Failed to initialize chat. Please refresh the page.');
+            return;
+        }
+    }
+
     try {
         isProcessing = true;
         textarea.value = '';
-        updateTextareaHeight(textarea);
-        
+        textarea.style.height = 'auto';
+
         // Show user message immediately
         appendMessage(message, false);
         scrollToBottom();
-        
+
         // Show typing indicator
         showTypingIndicator();
-        
+
+        console.log('Sending message:', { message, chatId });
         const response = await fetch(`${API_URL}/api/ai/chat/message`, {
             method: 'POST',
             ...API_CONFIG,
             body: JSON.stringify({ message, chatId })
         });
-        
+
         const data = await response.json();
-        
+        console.log('Response received:', data);
+
         // Remove typing indicator
         hideTypingIndicator();
-        
+
         if (data.ok) {
-            appendMessage(data.response, true);
+            // Stream the AI response with animation
+            await appendStreamingMessage(data.response, true);
             scrollToBottom();
+            // Refresh chat list to update title
+            await loadChatList();
         } else {
-            showError('Failed to get response. Please try again.');
+            showError(data.error || 'Failed to get response. Please try again.');
         }
     } catch (error) {
         console.error('Error sending message:', error);
@@ -110,109 +216,105 @@ async function sendMessage() {
     }
 }
 
-// Format timestamp
-function formatTimestamp(date) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const messageDate = new Date(date);
-    
-    const timeString = messageDate.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit'
-    });
-    
-    if (messageDate >= today) {
-        return timeString;
-    } else if (messageDate >= new Date(today - 86400000)) {
-        return `Yesterday ${timeString}`;
-    } else {
-        return messageDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric'
-        }) + ' ' + timeString;
+// Append message to chat with markdown support
+function appendMessage(content, isAi) {
+    const messagesContainer = document.getElementById('chatMessages');
+
+    // Remove empty state if present
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        messagesContainer.innerHTML = '';
+        messagesContainer.classList.add('has-messages');
     }
-}
 
-// Format message content (handle markdown-like syntax)
-function formatMessage(content) {
-    if (!content) return '';
-    
-    // Convert URLs to links
-    content = content.replace(
-        /(https?:\/\/[^\s]+)/g,
-        '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-    
-    // Convert code blocks with language support
-    content = content.replace(/```(\w+)?\n([\s\S]+?)```/g, (_, lang, code) => {
-        return `<pre><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`;
-    });
-    
-    // Convert inline code
-    content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Convert bullet points
-    content = content.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
-    content = content.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-    
-    // Convert line breaks
-    content = content.replace(/\n/g, '<br>');
-    
-    return content;
-}
-
-// Append message with typing animation
-async function appendMessage(content, isAi, timestamp = new Date()) {
-    const messagesContainer = document.querySelector('.chat-messages');
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isAi ? 'ai' : ''}`;
-    
+    messageDiv.className = `message ${isAi ? 'ai-message' : 'user-message'}`;
+
+    // Parse markdown for AI messages, escape HTML for user messages
+    const displayContent = isAi ? marked.parse(content) : escapeHtml(content);
+
     messageDiv.innerHTML = `
-        <div class="message-avatar ${isAi ? 'ai-avatar' : 'user-avatar'}">
-            <i class="fas fa-${isAi ? 'robot' : 'user'}"></i>
+        <div class="msg-avatar ${isAi ? 'ai' : 'user'}">
+            <i class="material-icons-outlined">${isAi ? 'auto_awesome' : 'person'}</i>
         </div>
-        <div class="message-content">
-            ${isAi ? '<span class="typing-text"></span>' : formatMessage(content)}
-            <div class="message-timestamp">${formatTimestamp(timestamp)}</div>
-        </div>
+        <div class="msg-text">${displayContent}</div>
     `;
-    
+
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    return messageDiv;
+}
+
+// Append streaming message with typing animation
+function appendStreamingMessage(content, isAi) {
+    const messagesContainer = document.getElementById('chatMessages');
+
+    // Remove empty state if present
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        messagesContainer.innerHTML = '';
+        messagesContainer.classList.add('has-messages');
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isAi ? 'ai-message' : 'user-message'}`;
+    messageDiv.id = 'streaming-message';
+
+    messageDiv.innerHTML = `
+        <div class="msg-avatar ${isAi ? 'ai' : 'user'}">
+            <i class="material-icons-outlined">${isAi ? 'auto_awesome' : 'person'}</i>
+        </div>
+        <div class="msg-text"></div>
+    `;
+
     messagesContainer.appendChild(messageDiv);
     scrollToBottom();
 
-    if (isAi) {
-        const typingText = messageDiv.querySelector('.typing-text');
-        const formattedContent = formatMessage(content);
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = formattedContent;
-        const textContent = tempDiv.textContent;
-        
-        // Type each character with a random delay
-        for (let i = 0; i < textContent.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, Math.random() * 30 + 20));
-            typingText.textContent = textContent.slice(0, i + 1);
-            scrollToBottom();
-        }
+    // Stream the content character by character
+    const textDiv = messageDiv.querySelector('.msg-text');
+    let currentText = '';
+    let index = 0;
 
-        // After typing is complete, replace with formatted content
-        typingText.innerHTML = formattedContent;
-    }
+    return new Promise((resolve) => {
+        const streamInterval = setInterval(() => {
+            if (index < content.length) {
+                // Add multiple characters at once for faster streaming
+                const chunkSize = 3;
+                const endIndex = Math.min(index + chunkSize, content.length);
+                currentText += content.substring(index, endIndex);
+                textDiv.innerHTML = marked.parse(currentText);
+                index = endIndex;
+                scrollToBottom();
+            } else {
+                clearInterval(streamInterval);
+                messageDiv.id = ''; // Remove streaming id
+                resolve(messageDiv);
+            }
+        }, 15); // 15ms per chunk for smooth animation
+    });
 }
 
 // Show typing indicator
 function showTypingIndicator() {
-    const messagesContainer = document.querySelector('.chat-messages');
+    const messagesContainer = document.getElementById('chatMessages');
+
+    // Remove empty state if present
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        messagesContainer.innerHTML = '';
+    }
+
     const typingDiv = document.createElement('div');
-    typingDiv.className = 'message ai typing-indicator';
+    typingDiv.className = 'message ai-message typing-indicator';
     typingDiv.innerHTML = `
-        <div class="message-avatar ai-avatar">
-            <i class="fas fa-robot"></i>
+        <div class="msg-avatar ai">
+            <i class="material-icons-outlined">auto_awesome</i>
         </div>
-        <div class="message-content">
-            <div class="typing-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+        <div class="msg-text">
+            <div class="typing-indicator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
             </div>
         </div>
     `;
@@ -230,66 +332,57 @@ function hideTypingIndicator() {
 
 // Show error message
 function showError(message) {
+    console.error('Error:', message);
+    const messagesContainer = document.getElementById('chatMessages');
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-    
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
+    errorDiv.className = 'message ai-message';
+    errorDiv.innerHTML = `
+        <div class="msg-avatar ai">
+            <i class="material-icons-outlined">error</i>
+        </div>
+        <div class="msg-text" style="color: #d32f2f;">
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+    messagesContainer.appendChild(errorDiv);
+    scrollToBottom();
 }
 
 // Scroll chat to bottom
 function scrollToBottom() {
-    const messagesContainer = document.querySelector('.chat-messages');
+    const messagesContainer = document.getElementById('chatMessages');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-// Update textarea height
-function updateTextareaHeight(textarea) {
-    textarea.style.height = 'auto';
-    textarea.style.height = (textarea.scrollHeight) + 'px';
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    const textarea = document.querySelector('.chat-input');
-    const sendButton = document.querySelector('.send-btn');
-    const newChatButton = document.querySelector('.new-chat-btn');
-    
-    // Initialize chat
+    const textarea = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendBtn');
+
+    if (!textarea || !sendButton) {
+        console.error('Required elements not found');
+        return;
+    }
+
+    // Initialize chat and load chat list
     initializeChat();
-    
+    loadChatList();
+
     // Send message on button click
     sendButton.addEventListener('click', sendMessage);
-    
-    // Send message on Enter (Shift+Enter for new line)
+
+    // Send message on Enter (without Shift)
     textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
-    });
-    
-    // Auto-resize textarea
-    textarea.addEventListener('input', () => {
-        updateTextareaHeight(textarea);
-    });
-    
-    // Start new chat
-    newChatButton.addEventListener('click', () => {
-        chatId = null;
-        initializeChat();
-    });
-    
-    // Handle chat history items
-    document.querySelectorAll('.history-item').forEach(item => {
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.history-item').forEach(i => {
-                i.classList.remove('active');
-            });
-            item.classList.add('active');
-        });
     });
 }); 

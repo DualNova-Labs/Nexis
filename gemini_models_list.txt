@@ -1,0 +1,283 @@
+======================================================================
+📋 LISTING AVAILABLE GEMINI MODELS
+======================================================================
+
+🔑 Using API Key: AIzaSyD-Z5...7bMw
+
+🔍 Fetching available models from v1beta API...
+
+✅ Found 47 models!
+
+📋 AVAILABLE MODELS:
+----------------------------------------------------------------------
+
+Model ID: gemini-2.5-flash
+  Full Name: models/gemini-2.5-flash
+  Display Name: Gemini 2.5 Flash
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-pro
+  Full Name: models/gemini-2.5-pro
+  Display Name: Gemini 2.5 Pro
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.0-flash
+  Full Name: models/gemini-2.0-flash
+  Display Name: Gemini 2.0 Flash
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.0-flash-001
+  Full Name: models/gemini-2.0-flash-001
+  Display Name: Gemini 2.0 Flash 001
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.0-flash-exp-image-generation
+  Full Name: models/gemini-2.0-flash-exp-image-generation
+  Display Name: Gemini 2.0 Flash (Image Generation) Experimental
+  Supports: generateContent, countTokens, bidiGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.0-flash-lite-001
+  Full Name: models/gemini-2.0-flash-lite-001
+  Display Name: Gemini 2.0 Flash-Lite 001
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.0-flash-lite
+  Full Name: models/gemini-2.0-flash-lite
+  Display Name: Gemini 2.0 Flash-Lite
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-exp-1206
+  Full Name: models/gemini-exp-1206
+  Display Name: Gemini Experimental 1206
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-flash-preview-tts
+  Full Name: models/gemini-2.5-flash-preview-tts
+  Display Name: Gemini 2.5 Flash Preview TTS
+  Supports: countTokens, generateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-pro-preview-tts
+  Full Name: models/gemini-2.5-pro-preview-tts
+  Display Name: Gemini 2.5 Pro Preview TTS
+  Supports: countTokens, generateContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3-1b-it
+  Full Name: models/gemma-3-1b-it
+  Display Name: Gemma 3 1B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3-4b-it
+  Full Name: models/gemma-3-4b-it
+  Display Name: Gemma 3 4B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3-12b-it
+  Full Name: models/gemma-3-12b-it
+  Display Name: Gemma 3 12B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3-27b-it
+  Full Name: models/gemma-3-27b-it
+  Display Name: Gemma 3 27B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3n-e4b-it
+  Full Name: models/gemma-3n-e4b-it
+  Display Name: Gemma 3n E4B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemma-3n-e2b-it
+  Full Name: models/gemma-3n-e2b-it
+  Display Name: Gemma 3n E2B
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-flash-latest
+  Full Name: models/gemini-flash-latest
+  Display Name: Gemini Flash Latest
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-flash-lite-latest
+  Full Name: models/gemini-flash-lite-latest
+  Display Name: Gemini Flash-Lite Latest
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-pro-latest
+  Full Name: models/gemini-pro-latest
+  Display Name: Gemini Pro Latest
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-flash-lite
+  Full Name: models/gemini-2.5-flash-lite
+  Display Name: Gemini 2.5 Flash-Lite
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-flash-image
+  Full Name: models/gemini-2.5-flash-image
+  Display Name: Nano Banana
+  Supports: generateContent, countTokens, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-flash-preview-09-2025
+  Full Name: models/gemini-2.5-flash-preview-09-2025
+  Display Name: Gemini 2.5 Flash Preview Sep 2025
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-flash-lite-preview-09-2025
+  Full Name: models/gemini-2.5-flash-lite-preview-09-2025
+  Display Name: Gemini 2.5 Flash-Lite Preview Sep 2025
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-3-pro-preview
+  Full Name: models/gemini-3-pro-preview
+  Display Name: Gemini 3 Pro Preview
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-3-flash-preview
+  Full Name: models/gemini-3-flash-preview
+  Display Name: Gemini 3 Flash Preview
+  Supports: generateContent, countTokens, createCachedContent, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-3-pro-image-preview
+  Full Name: models/gemini-3-pro-image-preview
+  Display Name: Nano Banana Pro
+  Supports: generateContent, countTokens, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: nano-banana-pro-preview
+  Full Name: models/nano-banana-pro-preview
+  Display Name: Nano Banana Pro
+  Supports: generateContent, countTokens, batchGenerateContent
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-robotics-er-1.5-preview
+  Full Name: models/gemini-robotics-er-1.5-preview
+  Display Name: Gemini Robotics-ER 1.5 Preview
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: gemini-2.5-computer-use-preview-10-2025
+  Full Name: models/gemini-2.5-computer-use-preview-10-2025
+  Display Name: Gemini 2.5 Computer Use Preview 10-2025
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: deep-research-pro-preview-12-2025
+  Full Name: models/deep-research-pro-preview-12-2025
+  Display Name: Deep Research Pro Preview (Dec-12-2025)
+  Supports: generateContent, countTokens
+  ✅ CAN USE FOR CHAT
+
+Model ID: embedding-001
+  Full Name: models/embedding-001
+  Display Name: Embedding 001
+  Supports: embedContent
+
+Model ID: text-embedding-004
+  Full Name: models/text-embedding-004
+  Display Name: Text Embedding 004
+  Supports: embedContent
+
+Model ID: gemini-embedding-001
+  Full Name: models/gemini-embedding-001
+  Display Name: Gemini Embedding 001
+  Supports: embedContent, countTextTokens, countTokens, asyncBatchEmbedContent
+
+Model ID: aqa
+  Full Name: models/aqa
+  Display Name: Model that performs Attributed Question Answering.
+  Supports: generateAnswer
+
+Model ID: imagen-4.0-generate-preview-06-06
+  Full Name: models/imagen-4.0-generate-preview-06-06
+  Display Name: Imagen 4 (Preview)
+  Supports: predict
+
+Model ID: imagen-4.0-ultra-generate-preview-06-06
+  Full Name: models/imagen-4.0-ultra-generate-preview-06-06
+  Display Name: Imagen 4 Ultra (Preview)
+  Supports: predict
+
+Model ID: imagen-4.0-generate-001
+  Full Name: models/imagen-4.0-generate-001
+  Display Name: Imagen 4
+  Supports: predict
+
+Model ID: imagen-4.0-ultra-generate-001
+  Full Name: models/imagen-4.0-ultra-generate-001
+  Display Name: Imagen 4 Ultra
+  Supports: predict
+
+Model ID: imagen-4.0-fast-generate-001
+  Full Name: models/imagen-4.0-fast-generate-001
+  Display Name: Imagen 4 Fast
+  Supports: predict
+
+Model ID: veo-2.0-generate-001
+  Full Name: models/veo-2.0-generate-001
+  Display Name: Veo 2
+  Supports: predictLongRunning
+
+Model ID: veo-3.0-generate-001
+  Full Name: models/veo-3.0-generate-001
+  Display Name: Veo 3
+  Supports: predictLongRunning
+
+Model ID: veo-3.0-fast-generate-001
+  Full Name: models/veo-3.0-fast-generate-001
+  Display Name: Veo 3 fast
+  Supports: predictLongRunning
+
+Model ID: veo-3.1-generate-preview
+  Full Name: models/veo-3.1-generate-preview
+  Display Name: Veo 3.1
+  Supports: predictLongRunning
+
+Model ID: veo-3.1-fast-generate-preview
+  Full Name: models/veo-3.1-fast-generate-preview
+  Display Name: Veo 3.1 fast
+  Supports: predictLongRunning
+
+Model ID: gemini-2.5-flash-native-audio-latest
+  Full Name: models/gemini-2.5-flash-native-audio-latest
+  Display Name: Gemini 2.5 Flash Native Audio Latest
+  Supports: countTokens, bidiGenerateContent
+
+Model ID: gemini-2.5-flash-native-audio-preview-09-2025
+  Full Name: models/gemini-2.5-flash-native-audio-preview-09-2025
+  Display Name: Gemini 2.5 Flash Native Audio Preview 09-2025
+  Supports: countTokens, bidiGenerateContent
+
+Model ID: gemini-2.5-flash-native-audio-preview-12-2025
+  Full Name: models/gemini-2.5-flash-native-audio-preview-12-2025
+  Display Name: Gemini 2.5 Flash Native Audio Preview 12-2025
+  Supports: countTokens, bidiGenerateContent
+
+======================================================================
+💡 TIP: Use the 'Model ID' in your Node.js code
+======================================================================
+
+📄 Results saved to: E:\rojin project\gopika\Nexis\gemini_models_list.txt

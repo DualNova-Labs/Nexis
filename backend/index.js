@@ -54,8 +54,11 @@ app.use("/messages", messageRouter);
 app.use("/files", fileRouter);
 app.use('/api/ai', aiRouter);
 
-// Setup WebSocket
-setupWebSocket(server);
+// Setup WebSocket and get broadcast function
+const broadcastToRoom = setupWebSocket(server);
+
+// Make broadcast available to routes
+app.set('broadcastToRoom', broadcastToRoom);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
