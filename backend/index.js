@@ -38,7 +38,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.get("/", (req, res) => {
-    res.json({ message: "Welcome to Archat API", status: "running" });
+    res.json({ message: "Welcome to Nexis API", status: "running" });
 });
 
 // API routes

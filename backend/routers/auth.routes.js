@@ -52,11 +52,13 @@ router.get(
 router.get('/auth/google/success', (req, res) => {
   res.send("home page")
 })
-clientID: process.env.GOOGLE_CLIENT_ID,
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "https://talkies-authentication-server-1.onrender.com/auth/google/callback",
-      passReqToCallback: true,
-    },
+  callbackURL: "https://talkies-authentication-server-1.onrender.com/auth/google/callback",
+  passReqToCallback: true,
+},
 async function (request, accessToken, refreshToken, profile, done) {
   let email = profile._json.email;
   let name = profile._json.name;

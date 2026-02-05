@@ -1,6 +1,6 @@
 # 🚀 Nexis - Premium Digital Collaboration Platform
 
-![Archat Banner](frontend/Images/video-camera.png)
+![Nexis Banner](frontend/Images/video-camera.png)
 
 ## 🌟 Overview
 
@@ -64,8 +64,8 @@ Before you begin, ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/abhi963007/arChat.git
-   cd arChat
+   git clone https://github.com/abhi963007/Nexis.git
+   cd Nexis
    ```
 
 2. **Set up the backend**
@@ -78,7 +78,7 @@ Before you begin, ensure you have the following installed:
    Create a `.env` file in the backend directory:
    ```env
    PORT=3001
-   MONGODB_URI=mongodb://127.0.0.1:27017/archat
+   MONGODB_URI=mongodb://127.0.0.1:27017/nexis
    JWT_SECRET=your-secret-key-here
    GEMINI_API_KEY=your-gemini-api-key
    ```

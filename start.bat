@@ -1,5 +1,5 @@
 @echo off
-echo Starting ArChat application...
+echo Starting Nexis application...
 echo.
 
 REM Start backend server
@@ -14,7 +14,7 @@ echo Starting frontend server...
 start cmd /k "cd /d %~dp0frontend && npx http-server -p 8080"
 
 echo.
-echo ArChat is now running!
+echo Nexis is now running!
 echo - Backend: http://localhost:3001
 echo - Frontend: http://localhost:8080
 echo.
