@@ -371,15 +371,22 @@
         }
 
         /* Settings panel that slides in/out */
+        .v-settings-wrapper {
+            position: absolute;
+            left: 24px;
+            bottom: 24px;
+            z-index: 100;
+        }
+
         .v-side-actions {
             position: absolute;
-            right: 0;
+            left: 0;
             bottom: 100%;
             margin-bottom: 8px;
             display: flex;
             flex-direction: column;
             gap: 8px;
-            align-items: flex-end;
+            align-items: flex-start;
             padding: 12px;
             background: rgba(32, 33, 36, 0.95);
             border-radius: 12px;
@@ -388,13 +395,6 @@
             transition: all 0.3s ease;
             pointer-events: none;
             backdrop-filter: blur(8px);
-        }
-
-        .v-settings-wrapper {
-            position: absolute;
-            right: 24px;
-            bottom: 24px;
-            z-index: 100;
         }
 
         .v-settings-wrapper:hover .v-side-actions,
