@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         :root {
             --primary: #1a73e8;
@@ -59,6 +62,10 @@
             display: flex;
             align-items: center;
             gap: 16px;
+        }
+
+        .chat-content {
+            transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .back-btn {
@@ -109,8 +116,60 @@
             display: flex;
             flex-direction: column;
             padding: 16px;
-            transition: 0.3s;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
             order: 2;
+            position: fixed;
+            right: 0;
+            top: 56px;
+            bottom: 0;
+            z-index: 200;
+        }
+
+        .sidebar.closed {
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-toggle {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: #f1f3f4;
+        }
+
+        .sidebar-toggle i {
+            font-size: 24px;
+            color: var(--text-dark);
+        }
+
+        /* Overlay backdrop */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 199;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .new-btn {
@@ -183,6 +242,7 @@
             flex-direction: column;
             background: white;
             position: relative;
+            transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .messages-container {
@@ -198,6 +258,19 @@
             display: flex;
             gap: 20px;
             max-width: 100%;
+        }
+
+        /* AI messages (left-aligned) */
+        .message.ai-message {
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+
+        /* User messages (right-aligned) */
+        .message.user-message {
+            flex-direction: row-reverse;
+            justify-content: flex-start;
+            margin-left: auto;
         }
 
         .msg-avatar {
@@ -227,6 +300,7 @@
             line-height: 1.6;
             color: var(--text-dark);
             padding-top: 6px;
+            max-width: 700px;
         }
 
         .msg-text p {
@@ -241,6 +315,131 @@
 
         .msg-text li {
             margin-bottom: 4px;
+        }
+
+        /* Markdown formatting */
+        .msg-text h1,
+        .msg-text h2,
+        .msg-text h3,
+        .msg-text h4,
+        .msg-text h5,
+        .msg-text h6 {
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .msg-text h1 {
+            font-size: 24px;
+        }
+
+        .msg-text h2 {
+            font-size: 20px;
+        }
+
+        .msg-text h3 {
+            font-size: 18px;
+        }
+
+        .msg-text strong {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .msg-text em {
+            font-style: italic;
+        }
+
+        .msg-text code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #d32f2f;
+        }
+
+        .msg-text pre {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .msg-text pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+
+        .msg-text blockquote {
+            border-left: 3px solid var(--ai-accent);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--text-gray);
+            font-style: italic;
+        }
+
+        .msg-text a {
+            color: var(--primary);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom 0.2s;
+        }
+
+        .msg-text a:hover {
+            border-bottom: 1px solid var(--primary);
+        }
+
+        .msg-text table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+
+        .msg-text table th,
+        .msg-text table td {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .msg-text table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .msg-text hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+
+        /* Typing cursor animation */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: var(--ai-accent);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            49% {
+                opacity: 1;
+            }
+
+            50%,
+            100% {
+                opacity: 0;
+            }
         }
 
         /* --- Input Bar --- */
@@ -334,6 +533,103 @@
             }
         }
 
+        /* Empty State Styling */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 24px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .empty-state-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #9334e6 0%, #7e22ce 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px rgba(147, 52, 230, 0.3);
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        .empty-state-icon i {
+            font-size: 64px;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .empty-state-title {
+            font-size: 32px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #9334e6 0%, #7e22ce 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: slideUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .empty-state-subtitle {
+            font-size: 16px;
+            color: var(--text-gray);
+            animation: slideUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .messages-container.has-messages .empty-state {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes floatIcon {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media (max-width: 1100px) {
 
             .messages-container,
@@ -364,76 +660,40 @@
             <span class="material-icons-outlined logo-icon">auto_awesome</span>
             <span>Nexis AI</span>
         </a>
-        <div style="width: 100px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="material-icons-outlined">menu</i>
+            </button>
+        </div>
     </nav>
 
     <div class="main-app">
+        <!-- Overlay Backdrop -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar closed" id="sidebar">
             <button class="new-btn" onclick="startNewChat()">
                 <i class="material-icons-outlined">add</i>
                 New Chat
             </button>
 
             <div class="history-list" id="historyList">
-                <h3 class="history-title">Recent Chats</h3>
-                <div class="history-item active">
-                    <i class="material-icons-outlined">chat_bubble_outline</i>
-                    <span>Getting Started</span>
-                </div>
-                <div class="history-item">
-                    <i class="material-icons-outlined">chat_bubble_outline</i>
-                    <span>Troubleshooting Audio</span>
-                </div>
-                <div class="history-item">
-                    <i class="material-icons-outlined">chat_bubble_outline</i>
-                    <span>Hosting large meetings</span>
-                </div>
+                <h3 class="history-title">RECENT CHATS</h3>
+                <!-- History items will be loaded dynamically -->
             </div>
         </aside>
 
         <!-- Chat Main -->
         <main class="chat-content">
             <div id="chatMessages" class="messages-container">
-                <!-- AI Welcome Message -->
-                <div class="message">
-                    <div class="msg-avatar ai">
+                <!-- Empty State -->
+                <div class="empty-state">
+                    <div class="empty-state-icon">
                         <i class="material-icons-outlined">auto_awesome</i>
                     </div>
-                    <div class="msg-text">
-                        <p>Hello! I'm your Nexis AI Assistant. How can I help you today?</p>
-                        <p>I can assist with:</p>
-                        <ul>
-                            <li>Technical support and troubleshooting</li>
-                            <li>Feature explanations and tutorials</li>
-                            <li>Optimizing your meeting experience</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- User Example Message -->
-                <div class="message">
-                    <div class="msg-avatar user">
-                        <i class="material-icons-outlined">person</i>
-                    </div>
-                    <div class="msg-text">
-                        <p>How do I enable background blur during a video call?</p>
-                    </div>
-                </div>
-
-                <!-- AI Response Example -->
-                <div class="message">
-                    <div class="msg-avatar ai">
-                        <i class="material-icons-outlined">auto_awesome</i>
-                    </div>
-                    <div class="msg-text">
-                        <p>To enable visual effects like background blur:</p>
-                        <ol>
-                            <li>Join or start a <strong>Video Call</strong></li>
-                            <li>Look for the visual effects icon in the control bar</li>
-                            <li>Select "Blur background" or choose a custom background image</li>
-                        </ol>
-                    </div>
+                    <h1 class="empty-state-title">Nexis AI Chatbot</h1>
+                    <p class="empty-state-subtitle">Start a conversation to get assistance</p>
                 </div>
             </div>
 
@@ -462,13 +722,13 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // Toggle history item
-        document.querySelectorAll('.history-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-            });
-        });
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('closed');
+            overlay.classList.toggle('active');
+        }
     </script>
 </body>
 
