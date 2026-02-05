@@ -452,6 +452,121 @@
             background: #d93025;
         }
 
+        /* --- Hand Tracking Camera Preview --- */
+        .camera-preview {
+            position: absolute;
+            bottom: 100px;
+            right: 24px;
+            width: 240px;
+            height: 180px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: #000;
+            z-index: 100;
+            display: none;
+            border: 2px solid var(--primary);
+        }
+
+        .camera-preview.active {
+            display: block;
+        }
+
+        .camera-preview .input-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-preview .output-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        .camera-controls {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 101;
+        }
+
+        .camera-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .camera-close-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        /* --- Hand Tracker Cursor --- */
+        .hand-tracker {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .hand-tracker.active {
+            display: block;
+        }
+
+        .hand-tracker .tracker-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        .hand-tracker .tracker-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            opacity: 0.6;
+            transition: all 0.1s;
+        }
+
+        .hand-tracker.drawing .tracker-dot {
+            background: var(--google-red);
+            box-shadow: 0 0 12px var(--google-red);
+            width: 8px;
+            height: 8px;
+        }
+
+        .hand-tracker.drawing .tracker-ring {
+            border-color: var(--google-red);
+            width: 24px;
+            height: 24px;
+            opacity: 1;
+        }
+
         /* --- Tooltips --- */
         .tooltip {
             position: absolute;
@@ -520,6 +635,11 @@
             }
         }
     </style>
+    <!-- MediaPipe Hands Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -623,6 +743,12 @@
 
                 <div class="divider"></div>
 
+                <button class="control-btn" data-tool="hand" title="Hand Tracking" id="handTrackingBtn">
+                    <i class="material-icons-outlined">back_hand</i>
+                </button>
+
+                <div class="divider"></div>
+
                 <button class="control-btn" data-tool="eraser" title="Eraser">
                     <i class="material-icons-outlined">ink_eraser</i>
                 </button>
@@ -638,7 +764,26 @@
                 <button class="end-btn" onclick="leaveWhiteboard()">Leave</button>
             </div>
         </div>
+        <!-- Hand Tracking Camera Preview -->
+        <div id="cameraPreview" class="camera-preview">
+            <video id="inputVideo" class="input-video" playsinline></video>
+            <canvas id="outputCanvas" class="output-canvas"></canvas>
+            <div class="camera-controls">
+                <button class="camera-close-btn" onclick="stopHandTracking()">
+                    <i class="material-icons-outlined">close</i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hand Tracker Cursor -->
+        <div id="handTracker" class="hand-tracker">
+            <div class="tracker-dot"></div>
+            <div class="tracker-ring"></div>
+        </div>
     </div>
+
+    <!-- Hand Tracking Logic -->
+    <script src="Scripts/handtracking.js"></script>
 
     <!-- Main Logic -->
     <script src="Scripts/whiteboard.js"></script>
