@@ -104,9 +104,10 @@ router.get('/list', authenticate, async (req, res) => {
         const { roomCode } = req.query;
         console.log('Files list requested for room:', roomCode);
 
+        // Require room code - reject if not provided
         if (!roomCode || roomCode.trim() === '') {
-            console.log('No room code provided, returning empty list');
-            return res.json({ files: [] });
+            console.log('Access denied: No room code provided');
+            return res.status(403).json({ error: 'Room code is required to access files' });
         }
 
         const trimmedRoomCode = roomCode.trim().toUpperCase();

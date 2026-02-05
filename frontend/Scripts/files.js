@@ -32,11 +32,43 @@ let currentRoomCode = localStorage.getItem('currentRoomCode');
 // Show room modal on page load if no room code
 if (!currentRoomCode) {
     setTimeout(() => showRoomModal(), 100);
+    // Don't load files - show locked state
+    showLockedState();
 } else {
     updateRoomUI();
     loadFiles();
     // Connect WebSocket for real-time collaboration
     connectWebSocket();
+}
+
+// Show locked state when not in a room
+function showLockedState() {
+    const filesGrid = document.getElementById('filesGrid');
+    const fileCount = document.getElementById('fileCount');
+    const roomBanner = document.getElementById('roomBanner');
+    
+    // Hide room banner
+    if (roomBanner) roomBanner.style.display = 'none';
+    
+    // Update file count
+    if (fileCount) fileCount.textContent = 'Locked';
+    
+    // Show locked message
+    if (filesGrid) {
+        filesGrid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-icon" style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                    <i class="material-icons-outlined" style="color: #667eea;">lock</i>
+                </div>
+                <h3 class="empty-title">Join a Room to Access Files</h3>
+                <p class="empty-subtitle">Enter a room code to view and share files. Files are private to each room.</p>
+                <button class="btn-primary" onclick="showRoomModal()" style="margin-top: 20px;">
+                    <i class="material-icons-outlined" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">meeting_room</i>
+                    Join Room
+                </button>
+            </div>
+        `;
+    }
 }
 
 // Make functions globally accessible for onclick handlers
@@ -152,9 +184,9 @@ window.exitRoom = function () {
     // Clear room code
     currentRoomCode = null;
     localStorage.removeItem('currentRoomCode');
-
-    // Redirect to dashboard
-    window.location.href = './dashboard.html';
+    
+    // Reset UI to locked state
+    showLockedState();
 }
 
 // WebSocket Functions for Real-Time Collaboration
@@ -440,7 +472,8 @@ function showUploadingState(filename) {
 // Load files
 async function loadFiles() {
     if (!currentRoomCode) {
-        console.log('No room code set, skipping file load');
+        console.log('No room code set, showing locked state');
+        showLockedState();
         return;
     }
 
@@ -455,13 +488,18 @@ async function loadFiles() {
         });
 
         const data = await response.json();
-        console.log('Files loaded:', data.files?.length || 0, 'files for room', roomCode);
-
-        if (response.ok) {
-            displayFiles(data.files);
-        } else {
+        
+        if (!response.ok) {
+            // Handle access denied or other errors
+            if (response.status === 403) {
+                showLockedState();
+                return;
+            }
             throw new Error(data.error || 'Failed to load files');
         }
+        
+        console.log('Files loaded:', data.files?.length || 0, 'files for room', roomCode);
+        displayFiles(data.files);
     } catch (error) {
         console.error('Load files error:', error);
         filesGrid.innerHTML = `

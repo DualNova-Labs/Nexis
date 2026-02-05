@@ -317,4 +317,4 @@ function setupWebSocket(server) {
     return broadcastToRoom;
 }
 
-module.exports = { setupWebSocket, broadcastToRoom };
+module.exports = { setupWebSocket };
