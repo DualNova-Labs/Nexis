@@ -1,4 +1,4 @@
-const url = "http://localhost:3001";
+const url = `http://${window.location.hostname}:3001`;
 
 // login script is  start hare
 let login = document.getElementById("login-form");

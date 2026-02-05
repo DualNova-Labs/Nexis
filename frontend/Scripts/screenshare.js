@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:3001';
-const WS_URL = 'ws://localhost:3001';
+const API_URL = `http://${window.location.hostname}:3001`;
+const WS_URL = `ws://${window.location.hostname}:3001`;
 
 const roomSelection = document.getElementById('roomSelection');
 const createRoomDiv = document.getElementById('createRoom');

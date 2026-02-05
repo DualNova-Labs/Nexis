@@ -39,7 +39,7 @@ signupForm.addEventListener("submit", async (e) => {
   }
 
   try {
-    const response = await fetch("http://localhost:3001/user/sign", {
+    const response = await fetch(`http://${window.location.hostname}:3001/user/sign`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

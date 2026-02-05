@@ -12,7 +12,7 @@ document.getElementById('userEmail').textContent = userDetails.email;
 async function validateSession() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
-        const res = await fetch('http://localhost:3001/user/admin/users', { // Using any protected route to verify token
+const API_BASE = `http://${window.location.hostname}:3001`;        const res = await fetch(`${API_BASE}/user/admin/users`, { // Using any protected route to verify token
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -34,7 +34,7 @@ validateSession();
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
-        await fetch('http://localhost:3001/user/logout', {
+        await fetch(`${API_BASE}/user/logout`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
