@@ -93,18 +93,49 @@ function updateRoomUI() {
     roomBanner.style.display = 'flex';
 }
 
-window.copyRoomCode = function () {
-    navigator.clipboard.writeText(currentRoomCode).then(() => {
-        // Simple feedback
-        const btn = event.target.closest('.btn-copy');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="material-icons-outlined" style="font-size: 18px;">check</i> Copied!';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-        }, 2000);
-    }).catch(err => {
-        alert('Failed to copy: ' + err);
-    });
+window.copyRoomCode = async function () {
+    // Ensure document is focused
+    window.focus();
+    
+    const btn = document.querySelector('.btn-copy');
+    const originalText = btn ? btn.innerHTML : '';
+    
+    try {
+        // Try modern clipboard API
+        await navigator.clipboard.writeText(currentRoomCode);
+        showCopySuccess(btn, originalText);
+    } catch (err) {
+        // Fallback: use execCommand
+        const textArea = document.createElement('textarea');
+        textArea.value = currentRoomCode;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopySuccess(btn, originalText);
+            } else {
+                throw new Error('execCommand failed');
+            }
+        } catch (e) {
+            console.error('Copy failed:', e);
+            alert('Failed to copy. Please select and copy the room code manually.');
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+}
+
+function showCopySuccess(btn, originalText) {
+    if (!btn) return;
+    btn.innerHTML = '<i class="material-icons-outlined" style="font-size: 18px;">check</i> Copied!';
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+    }, 2000);
 }
 
 window.exitRoom = function () {

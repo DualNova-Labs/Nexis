@@ -199,7 +199,8 @@ async function sendMessage() {
         hideTypingIndicator();
 
         if (data.ok) {
-            appendMessage(data.response, true);
+            // Stream the AI response with animation
+            await appendStreamingMessage(data.response, true);
             scrollToBottom();
             // Refresh chat list to update title
             await loadChatList();
@@ -215,7 +216,7 @@ async function sendMessage() {
     }
 }
 
-// Append message to chat
+// Append message to chat with markdown support
 function appendMessage(content, isAi) {
     const messagesContainer = document.getElementById('chatMessages');
 
@@ -229,17 +230,68 @@ function appendMessage(content, isAi) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isAi ? 'ai-message' : 'user-message'}`;
 
+    // Parse markdown for AI messages, escape HTML for user messages
+    const displayContent = isAi ? marked.parse(content) : escapeHtml(content);
+
     messageDiv.innerHTML = `
         <div class="msg-avatar ${isAi ? 'ai' : 'user'}">
             <i class="material-icons-outlined">${isAi ? 'auto_awesome' : 'person'}</i>
         </div>
-        <div class="msg-text">
-            <p>${escapeHtml(content)}</p>
-        </div>
+        <div class="msg-text">${displayContent}</div>
     `;
 
     messagesContainer.appendChild(messageDiv);
     scrollToBottom();
+    return messageDiv;
+}
+
+// Append streaming message with typing animation
+function appendStreamingMessage(content, isAi) {
+    const messagesContainer = document.getElementById('chatMessages');
+
+    // Remove empty state if present
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        messagesContainer.innerHTML = '';
+        messagesContainer.classList.add('has-messages');
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isAi ? 'ai-message' : 'user-message'}`;
+    messageDiv.id = 'streaming-message';
+
+    messageDiv.innerHTML = `
+        <div class="msg-avatar ${isAi ? 'ai' : 'user'}">
+            <i class="material-icons-outlined">${isAi ? 'auto_awesome' : 'person'}</i>
+        </div>
+        <div class="msg-text"></div>
+    `;
+
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+
+    // Stream the content character by character
+    const textDiv = messageDiv.querySelector('.msg-text');
+    let currentText = '';
+    let index = 0;
+
+    return new Promise((resolve) => {
+        const streamInterval = setInterval(() => {
+            if (index < content.length) {
+                // Add multiple characters at once for faster streaming
+                const chunkSize = 3;
+                const endIndex = Math.min(index + chunkSize, content.length);
+                currentText += content.substring(index, endIndex);
+                textDiv.innerHTML = marked.parse(currentText);
+                index = endIndex;
+                scrollToBottom();
+            } else {
+                clearInterval(streamInterval);
+                messageDiv.id = ''; // Remove streaming id
+                resolve(messageDiv);
+            }
+        }, 15); // 15ms per chunk for smooth animation
+    });
 }
 
 // Show typing indicator
