@@ -1,5 +1,7 @@
-const API_URL = `http://${window.location.hostname}:3001`;
-const WS_URL = `ws://${window.location.hostname}:3001`;
+// Get API base URL - works for both local server and direct file access
+const hostname = window.location.hostname || 'localhost';
+const API_URL = `http://${hostname}:3001`;
+const WS_URL = `ws://${hostname}:3001`;
 
 const roomSelection = document.getElementById('roomSelection');
 const createRoomDiv = document.getElementById('createRoom');

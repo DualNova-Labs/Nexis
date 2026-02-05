@@ -1,8 +1,9 @@
 let chatId = null;
 let isProcessing = false;
 
-// Add API base URL and configuration
-const API_URL = `http://${window.location.hostname}:3001`;
+// Get API base URL - works for both local server and direct file access
+const hostname = window.location.hostname || 'localhost';
+const API_URL = `http://${hostname}:3001`;
 const API_CONFIG = {
     headers: {
         'Content-Type': 'application/json',
