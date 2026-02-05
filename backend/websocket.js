@@ -55,6 +55,15 @@ function setupWebSocket(server) {
                     case 'join':
                         await handleJoin(ws, message);
                         break;
+                    case 'file-join':
+                        await handleFileJoin(ws, message);
+                        break;
+                    case 'file-upload':
+                        await handleFileUpload(ws, message);
+                        break;
+                    case 'file-delete':
+                        await handleFileDelete(ws, message);
+                        break;
                     case 'offer':
                         await handleOffer(ws, message);
                         break;
@@ -186,6 +195,75 @@ function setupWebSocket(server) {
         await handleDisconnect(ws);
     }
     
+    // File sharing handlers - like video call but for files
+    async function handleFileJoin(ws, message) {
+        const { room, email } = message;
+        
+        // Store client info for file room
+        clients.set(ws, { room, email, type: 'file' });
+        
+        // Add to file room
+        if (!rooms.has(room)) {
+            rooms.set(room, new Set());
+        }
+        rooms.get(room).add(ws);
+        
+        console.log(`User ${email} joined file room ${room}`);
+        
+        // Notify others in room
+        broadcastToRoom(room, {
+            type: 'file-user-joined',
+            email: email,
+            timestamp: new Date().toISOString()
+        }, ws);
+        
+        // Send current participants
+        const participants = Array.from(rooms.get(room))
+            .filter(client => client !== ws)
+            .map(client => clients.get(client).email);
+            
+        ws.send(JSON.stringify({
+            type: 'file-room-info',
+            participants: participants
+        }));
+    }
+    
+    async function handleFileUpload(ws, message) {
+        const clientInfo = clients.get(ws);
+        if (!clientInfo) return;
+        
+        const { room } = clientInfo;
+        const { file } = message;
+        
+        console.log(`File uploaded in room ${room} by ${clientInfo.email}:`, file.filename);
+        
+        // Broadcast to all users in the room
+        broadcastToRoom(room, {
+            type: 'file-uploaded',
+            file: file,
+            uploadedBy: clientInfo.email,
+            timestamp: new Date().toISOString()
+        }, ws);
+    }
+    
+    async function handleFileDelete(ws, message) {
+        const clientInfo = clients.get(ws);
+        if (!clientInfo) return;
+        
+        const { room } = clientInfo;
+        const { fileId } = message;
+        
+        console.log(`File deleted in room ${room} by ${clientInfo.email}:`, fileId);
+        
+        // Broadcast to all users in the room
+        broadcastToRoom(room, {
+            type: 'file-deleted',
+            fileId: fileId,
+            deletedBy: clientInfo.email,
+            timestamp: new Date().toISOString()
+        }, ws);
+    }
+    
     // Handle client disconnect
     function handleDisconnect(ws) {
         const clientInfo = clients.get(ws);
@@ -234,6 +312,9 @@ function setupWebSocket(server) {
             await Promise.all(broadcasts);
         }
     }
+    
+    // Return the broadcast function for use in HTTP routes
+    return broadcastToRoom;
 }
 
-module.exports = { setupWebSocket }; 
+module.exports = { setupWebSocket, broadcastToRoom };

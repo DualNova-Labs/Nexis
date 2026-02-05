@@ -25,6 +25,11 @@ const fileSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    roomCode: {
+        type: String,
+        required: true,
+        index: true  // Add index for faster queries
+    },
     uploadedAt: {
         type: Date,
         default: Date.now

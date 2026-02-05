@@ -5,6 +5,11 @@ if (!userDetails) {
     window.location.href = './admin-dashboard.html';
 }
 
+// Get API base URL - works for both local server and direct file access
+const API_BASE = window.location.hostname 
+  ? `http://${window.location.hostname}:3001`
+  : 'http://localhost:3001';
+
 // Display user email
 document.getElementById('userEmail').textContent = userDetails.email;
 
@@ -12,7 +17,7 @@ document.getElementById('userEmail').textContent = userDetails.email;
 async function validateSession() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
-const API_BASE = `http://${window.location.hostname}:3001`;        const res = await fetch(`${API_BASE}/user/admin/users`, { // Using any protected route to verify token
+        const res = await fetch(`${API_BASE}/user/admin/users`, { // Using any protected route to verify token
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
