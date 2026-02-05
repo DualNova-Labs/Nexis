@@ -1,7 +1,11 @@
 // Get API base URL - works for both local server and direct file access
-const API_URL = window.location.hostname 
-  ? `http://${window.location.hostname}:3001`
-  : 'http://localhost:3001';
+const hostname = window.location.hostname || 'localhost';
+const API_URL = `http://${hostname}:3001`;
+const WS_URL = `ws://${hostname}:3001`;
+
+// WebSocket for real-time collaboration
+let ws = null;
+let roomParticipants = new Set();
 
 // Get DOM elements
 const dropZone = document.getElementById('dropZone');
@@ -31,6 +35,8 @@ if (!currentRoomCode) {
 } else {
     updateRoomUI();
     loadFiles();
+    // Connect WebSocket for real-time collaboration
+    connectWebSocket();
 }
 
 // Make functions globally accessible for onclick handlers
@@ -67,13 +73,19 @@ window.joinRoom = function () {
         return;
     }
 
-    // Join the room directly (rooms are created automatically when files are uploaded)
+    // Join the room (Google Meet style - any code works, room created on first file upload)
     currentRoomCode = roomCode;
     localStorage.setItem('currentRoomCode', roomCode);
 
     window.hideRoomModal();
     updateRoomUI();
     loadFiles();
+
+    // Connect WebSocket for real-time collaboration
+    connectWebSocket();
+
+    // Show feedback to user
+    showNotification(`Joined room: ${roomCode}`, 'success');
 }
 
 function updateRoomUI() {
@@ -100,12 +112,156 @@ window.exitRoom = function () {
         return;
     }
 
+    // Disconnect WebSocket
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+
     // Clear room code
     currentRoomCode = null;
     localStorage.removeItem('currentRoomCode');
 
     // Redirect to dashboard
     window.location.href = './dashboard.html';
+}
+
+// WebSocket Functions for Real-Time Collaboration
+function connectWebSocket() {
+    if (ws) {
+        ws.close();
+    }
+
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        console.log('WebSocket connected for file sharing');
+        // Join the file room if we have a room code
+        if (currentRoomCode) {
+            joinFileRoom();
+        }
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            console.log('WebSocket message received:', message.type);
+
+            switch (message.type) {
+                case 'file-uploaded':
+                    // Another user uploaded a file - add it to the list
+                    handleFileUploaded(message.file, message.uploadedBy);
+                    break;
+                case 'file-deleted':
+                    // Another user deleted a file - remove it from the list
+                    handleFileDeleted(message.fileId);
+                    break;
+                case 'file-user-joined':
+                    // Another user joined the room
+                    roomParticipants.add(message.email);
+                    updateParticipantsDisplay();
+                    showNotification(`${message.email.split('@')[0]} joined the room`, 'info');
+                    break;
+                case 'file-room-info':
+                    // Received current participants
+                    roomParticipants = new Set(message.participants);
+                    updateParticipantsDisplay();
+                    break;
+            }
+        } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        // Reconnect after 3 seconds
+        setTimeout(() => {
+            if (currentRoomCode) {
+                connectWebSocket();
+            }
+        }, 3000);
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+}
+
+function joinFileRoom() {
+    if (ws && ws.readyState === WebSocket.OPEN && currentRoomCode) {
+        ws.send(JSON.stringify({
+            type: 'file-join',
+            room: currentRoomCode,
+            email: userDetails.email
+        }));
+        console.log(`Joined file room: ${currentRoomCode}`);
+    }
+}
+
+function handleFileUploaded(file, uploadedBy) {
+    // Show notification
+    showNotification(`New file uploaded by ${uploadedBy.split('@')[0]}: ${file.filename}`, 'success');
+
+    // Reload file list to show the new file
+    loadFiles();
+}
+
+function handleFileDeleted(fileId) {
+    // Remove the file card from the UI
+    const fileCard = document.querySelector(`[data-file-id="${fileId}"]`);
+    if (fileCard) {
+        fileCard.remove();
+        showNotification('A file was deleted', 'info');
+
+        // Update file count
+        const currentCount = filesGrid.querySelectorAll('.file-card:not(.uploading)').length;
+        fileCount.textContent = `${currentCount} file${currentCount !== 1 ? 's' : ''}`;
+
+        // If no files left, show empty state
+        if (currentCount === 0) {
+            filesGrid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="material-icons-outlined">folder_open</i>
+                    </div>
+                    <h3 class="empty-title">No files in this room yet</h3>
+                    <p class="empty-subtitle">Upload your first file to get started</p>
+                </div>
+            `;
+        }
+    }
+}
+
+// Update participants display in room banner
+function updateParticipantsDisplay() {
+    const participantsDisplay = document.getElementById('participantsDisplay');
+    const participantsAvatars = document.getElementById('participantsAvatars');
+    const participantsCount = document.getElementById('participantsCount');
+
+    if (!participantsDisplay || roomParticipants.size === 0) {
+        if (participantsDisplay) participantsDisplay.style.display = 'none';
+        return;
+    }
+
+    participantsDisplay.style.display = 'flex';
+
+    // Create avatar elements (show max 3 avatars + count)
+    const participants = Array.from(roomParticipants);
+    const visibleParticipants = participants.slice(0, 3);
+
+    participantsAvatars.innerHTML = visibleParticipants.map(email => {
+        const initials = email.split('@')[0].substring(0, 2).toUpperCase();
+        return `<div class="participant-avatar" title="${email}">${initials}</div>`;
+    }).join('');
+
+    // Update count text
+    const remaining = participants.length - visibleParticipants.length;
+    if (remaining > 0) {
+        participantsCount.textContent = `+${remaining} more`;
+    } else {
+        participantsCount.textContent = `${participants.length} participant${participants.length !== 1 ? 's' : ''}`;
+    }
 }
 
 // Close modal when clicking outside
@@ -179,9 +335,17 @@ async function handleMultipleFiles(files) {
 // Upload file
 async function uploadFile(file) {
     try {
+        // Ensure we have a valid room code
+        if (!currentRoomCode || currentRoomCode.trim() === '') {
+            throw new Error('No room code set. Please join a room first.');
+        }
+
+        const roomCode = currentRoomCode.trim().toUpperCase();
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('roomCode', currentRoomCode);
+        formData.append('roomCode', roomCode);
+
+        console.log('Uploading file to room:', roomCode, 'File:', file.name);
 
         // Show uploading state
         const uploadingCard = showUploadingState(file.name);
@@ -245,17 +409,22 @@ function showUploadingState(filename) {
 // Load files
 async function loadFiles() {
     if (!currentRoomCode) {
+        console.log('No room code set, skipping file load');
         return;
     }
 
+    const roomCode = currentRoomCode.toUpperCase();
+    console.log('Loading files for room:', roomCode);
+
     try {
-        const response = await fetch(`${API_URL}/files/list?roomCode=${encodeURIComponent(currentRoomCode)}`, {
+        const response = await fetch(`${API_URL}/files/list?roomCode=${encodeURIComponent(roomCode)}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
         const data = await response.json();
+        console.log('Files loaded:', data.files?.length || 0, 'files for room', roomCode);
 
         if (response.ok) {
             displayFiles(data.files);

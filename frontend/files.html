@@ -190,6 +190,52 @@
             background: rgba(244, 67, 54, 0.9);
         }
 
+        /* Participants Display - Video Call Style */
+        .participants-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 16px;
+            padding-left: 16px;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .participants-avatars {
+            display: flex;
+            align-items: center;
+        }
+
+        .participant-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            border: 2px solid white;
+            margin-left: -8px;
+            transition: transform 0.2s;
+        }
+
+        .participant-avatar:first-child {
+            margin-left: 0;
+        }
+
+        .participant-avatar:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .participants-count {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
         /* --- Main Container --- */
         .container {
             max-width: 1200px;
@@ -735,6 +781,10 @@
                 <i class="material-icons-outlined" style="font-size: 18px;">content_copy</i>
                 Copy Code
             </button>
+            <div class="participants-display" id="participantsDisplay" style="display: none;">
+                <div class="participants-avatars" id="participantsAvatars"></div>
+                <span class="participants-count" id="participantsCount"></span>
+            </div>
         </div>
         <div style="display: flex; gap: 12px;">
             <button class="btn-change-room" onclick="showRoomModal()">
