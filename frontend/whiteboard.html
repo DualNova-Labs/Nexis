@@ -782,6 +782,9 @@
         </div>
     </div>
 
+    <!-- Whiteboard Sync (Real-time collaboration) -->
+    <script src="Scripts/whiteboard-sync.js"></script>
+
     <!-- Hand Tracking Logic -->
     <script src="Scripts/handtracking.js"></script>
 
@@ -841,6 +844,11 @@
             setTimeout(() => {
                 if (typeof resizeCanvas === 'function') resizeCanvas();
             }, 100);
+
+            // Initialize WebSocket sync for real-time collaboration
+            if (typeof initWhiteboardSync === 'function' && currentRoomId) {
+                initWhiteboardSync(currentRoomId);
+            }
         };
 
         window.joinExistingRoom = function () {

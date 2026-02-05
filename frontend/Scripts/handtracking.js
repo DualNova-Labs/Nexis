@@ -7,19 +7,31 @@ let isHandTrackingActive = false;
 let isDrawingWithHand = false;
 let lastHandPosition = { x: 0, y: 0 };
 
-// DOM Elements
-const videoElement = document.getElementById('inputVideo');
-const outputCanvas = document.getElementById('outputCanvas');
-const outputCtx = outputCanvas.getContext('2d');
-const cameraPreview = document.getElementById('cameraPreview');
-const handTracker = document.getElementById('handTracker');
-const handTrackingBtn = document.getElementById('handTrackingBtn');
-const mainCanvas = document.getElementById('canvas');
-const mainCtx = mainCanvas.getContext('2d');
+// DOM Elements - initialized after DOM is ready
+let videoElement = null;
+let outputCanvas = null;
+let outputCtx = null;
+let cameraPreview = null;
+let handTracker = null;
+let handTrackingBtn = null;
+let mainCanvas = null;
+let mainCtx = null;
 
 // Configuration
 const PINCH_THRESHOLD = 0.05; // Distance between thumb and index to trigger pinch
 const SMOOTHING_FACTOR = 0.3; // For smoothing hand movement
+
+// Initialize DOM elements
+function initDOMElements() {
+    videoElement = document.getElementById('inputVideo');
+    outputCanvas = document.getElementById('outputCanvas');
+    outputCtx = outputCanvas ? outputCanvas.getContext('2d') : null;
+    cameraPreview = document.getElementById('cameraPreview');
+    handTracker = document.getElementById('handTracker');
+    handTrackingBtn = document.getElementById('handTrackingBtn');
+    mainCanvas = document.getElementById('canvas');
+    mainCtx = mainCanvas ? mainCanvas.getContext('2d') : null;
+}
 
 // Initialize hand tracking
 function initHandTracking() {
@@ -45,23 +57,28 @@ function initHandTracking() {
 async function startHandTracking() {
     if (isHandTrackingActive) return;
 
-    try {
-        // Request camera permission
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                width: 320,
-                height: 240,
-                facingMode: 'user'
-            } 
-        });
+    // Ensure DOM elements are initialized
+    if (!videoElement) {
+        initDOMElements();
+    }
 
-        // Initialize MediaPipe
+    // Validate required elements exist
+    if (!videoElement || !outputCanvas || !cameraPreview || !mainCanvas) {
+        console.error('Hand tracking: Required DOM elements not found');
+        alert('Hand tracking initialization failed. Please refresh the page.');
+        return;
+    }
+
+    try {
+        console.log('Starting hand tracking...');
+
+        // Initialize MediaPipe Hands
         initHandTracking();
 
-        // Set up camera
+        // Set up camera using MediaPipe Camera utility
         camera = new Camera(videoElement, {
             onFrame: async () => {
-                if (hands) {
+                if (hands && isHandTrackingActive) {
                     await hands.send({ image: videoElement });
                 }
             },
@@ -70,10 +87,10 @@ async function startHandTracking() {
         });
 
         await camera.start();
+        console.log('Camera started successfully');
 
         // Show UI elements
         cameraPreview.classList.add('active');
-        handTracker.classList.add('active');
         handTrackingBtn.classList.add('active');
         
         isHandTrackingActive = true;
@@ -84,43 +101,55 @@ async function startHandTracking() {
 
     } catch (error) {
         console.error('Error starting hand tracking:', error);
-        alert('Unable to access camera. Please ensure camera permissions are granted.');
+        alert('Unable to access camera. Please ensure camera permissions are granted and try again.');
         stopHandTracking();
     }
 }
 
 // Stop hand tracking
 function stopHandTracking() {
-    if (!isHandTrackingActive) return;
-
+    console.log('Stopping hand tracking...');
+    
     isHandTrackingActive = false;
     isDrawingWithHand = false;
 
     // Stop camera
     if (camera) {
-        camera.stop();
+        try {
+            camera.stop();
+        } catch (e) {
+            console.warn('Error stopping camera:', e);
+        }
         camera = null;
     }
 
     // Hide UI elements
-    cameraPreview.classList.remove('active');
-    handTracker.classList.remove('active');
-    handTracker.classList.remove('drawing');
-    handTrackingBtn.classList.remove('active');
+    if (cameraPreview) cameraPreview.classList.remove('active');
+    if (handTracker) {
+        handTracker.classList.remove('active');
+        handTracker.classList.remove('drawing');
+    }
+    if (handTrackingBtn) handTrackingBtn.classList.remove('active');
 
     // Clear output canvas
-    outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+    if (outputCtx && outputCanvas) {
+        outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+    }
 }
 
 // Process hand detection results
 function onHandResults(results) {
+    if (!outputCtx || !outputCanvas) return;
+
     // Clear output canvas
     outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // No hand detected
-        handTracker.classList.remove('active');
-        isDrawingWithHand = false;
+        // No hand detected - keep tracker visible but stop drawing
+        if (isDrawingWithHand) {
+            isDrawingWithHand = false;
+            if (handTracker) handTracker.classList.remove('drawing');
+        }
         return;
     }
 
@@ -170,7 +199,14 @@ function onHandResults(results) {
         if (!isDrawingWithHand) {
             // Start drawing
             isDrawingWithHand = true;
-            handTracker.classList.add('drawing');
+            if (handTracker) handTracker.classList.add('drawing');
+            
+            // Set up drawing style on main canvas
+            mainCtx.strokeStyle = window.currentColor || '#202124';
+            mainCtx.lineWidth = 3;
+            mainCtx.lineCap = 'round';
+            mainCtx.lineJoin = 'round';
+            mainCtx.globalCompositeOperation = 'source-over';
             
             // Start a new path on the main canvas
             mainCtx.beginPath();
@@ -184,15 +220,15 @@ function onHandResults(results) {
         if (isDrawingWithHand) {
             // Stop drawing
             isDrawingWithHand = false;
-            handTracker.classList.remove('drawing');
+            if (handTracker) handTracker.classList.remove('drawing');
         }
     }
 
     // Update last position
     lastHandPosition = { x: smoothedX, y: smoothedY };
 
-    // Ensure tracker is visible
-    handTracker.classList.add('active');
+    // Ensure tracker is visible when hand is detected
+    if (handTracker) handTracker.classList.add('active');
 }
 
 // Toggle hand tracking
@@ -206,11 +242,18 @@ function toggleHandTracking() {
 
 // Event listener for hand tracking button
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize DOM elements
+    initDOMElements();
+    
     if (handTrackingBtn) {
         handTrackingBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('Hand tracking button clicked');
             toggleHandTracking();
         });
+    } else {
+        console.warn('Hand tracking button not found');
     }
 });
 
