@@ -463,16 +463,29 @@
         <!-- Chat Room Interface -->
         <div id="chatRoom" class="chat-container" style="display: none;">
             <div class="chat-header">
-                <div class="chat-info">
-                    <span class="material-icons-outlined" style="color: #d93025">groups</span>
-                    <span class="chat-room-id" id="roomId"></span>
-                    <button onclick="copyRoomId()" class="copy-btn" title="Copy Room ID">
-                        <i class="material-icons-outlined">content_copy</i>
-                    </button>
+                <div class="nav-left" style="flex: 1;">
+                    <a href="dashboard.html" class="back-btn">
+                        <i class="material-icons-outlined">arrow_back</i>
+                        Back to Dashboard
+                    </a>
                 </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="#" class="logo-box" style="justify-content: center; flex: 1;">
+                    <span class="material-icons-outlined" style="color:#d93025">forum</span>
+                    <span>Nexis Chat</span>
+                </a>
+                <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
                     <span class="material-icons-outlined" style="color: #34a853; font-size: 18px;">security</span>
                     <span style="font-size: 13px; color: var(--text-gray);">Encrypted</span>
+                </div>
+            </div>
+
+            <div class="chat-subheader" style="padding: 8px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white;">
+                <div class="chat-info">
+                    <span class="material-icons-outlined" style="color: #d93025; font-size: 20px;">groups</span>
+                    <span class="chat-room-id" id="roomId"></span>
+                    <button onclick="copyRoomId()" class="copy-btn" title="Copy Room ID">
+                        <i class="material-icons-outlined" style="font-size: 18px;">content_copy</i>
+                    </button>
                 </div>
             </div>
 
