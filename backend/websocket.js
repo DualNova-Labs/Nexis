@@ -7,6 +7,9 @@ function setupWebSocket(server) {
     const rooms = new Map();
     const clients = new Map();
     
+    // Store whiteboard canvas state per room
+    const whiteboardStates = new Map();
+    
     // Heartbeat interval (30 seconds)
     const HEARTBEAT_INTERVAL = 30000;
     const CLIENT_TIMEOUT = 35000;
@@ -78,6 +81,21 @@ function setupWebSocket(server) {
                         break;
                     case 'chat':
                         await handleChat(ws, message);
+                        break;
+                    case 'whiteboard-join':
+                        await handleWhiteboardJoin(ws, message);
+                        break;
+                    case 'whiteboard-draw':
+                        await handleWhiteboardDraw(ws, message);
+                        break;
+                    case 'whiteboard-state':
+                        await handleWhiteboardState(ws, message);
+                        break;
+                    case 'whiteboard-clear':
+                        await handleWhiteboardClear(ws, message);
+                        break;
+                    case 'whiteboard-request-state':
+                        await handleWhiteboardRequestState(ws, message);
                         break;
                 }
             } catch (error) {
@@ -310,6 +328,104 @@ function setupWebSocket(server) {
             });
             
             await Promise.all(broadcasts);
+        }
+    }
+    
+    // Handle whiteboard join - send current canvas state to new user
+    async function handleWhiteboardJoin(ws, message) {
+        const { room } = message;
+        console.log(`User joining whiteboard room ${room}`);
+        
+        // Store client info for whiteboard
+        clients.set(ws, { room, email: message.email || 'anonymous' });
+        
+        // Add to room
+        if (!rooms.has(room)) {
+            rooms.set(room, new Set());
+        }
+        rooms.get(room).add(ws);
+        
+        // Send existing canvas state if available
+        if (whiteboardStates.has(room)) {
+            const state = whiteboardStates.get(room);
+            ws.send(JSON.stringify({
+                type: 'whiteboard-state',
+                state: state
+            }));
+            console.log(`Sent existing whiteboard state to new user in room ${room}`);
+        }
+        
+        // Notify others
+        broadcastToRoom(room, {
+            type: 'user-joined',
+            email: message.email || 'anonymous'
+        }, ws);
+    }
+    
+    // Handle whiteboard draw - broadcast drawing action to all users in room
+    async function handleWhiteboardDraw(ws, message) {
+        const { room, drawData } = message;
+        
+        // Broadcast draw action to all other users in the room
+        await broadcastToRoom(room, {
+            type: 'whiteboard-draw',
+            drawData: drawData
+        }, ws);
+    }
+    
+    // Handle whiteboard state update - store and broadcast full canvas state
+    async function handleWhiteboardState(ws, message) {
+        const { room, state } = message;
+        
+        // Store the canvas state for this room
+        whiteboardStates.set(room, state);
+        console.log(`Updated whiteboard state for room ${room}`);
+        
+        // Broadcast to others (optional - for full sync)
+        await broadcastToRoom(room, {
+            type: 'whiteboard-state',
+            state: state
+        }, ws);
+    }
+    
+    // Handle whiteboard clear - clear canvas for all users
+    async function handleWhiteboardClear(ws, message) {
+        const { room } = message;
+        
+        // Clear stored state
+        whiteboardStates.delete(room);
+        console.log(`Cleared whiteboard state for room ${room}`);
+        
+        // Broadcast clear to all users
+        await broadcastToRoom(room, {
+            type: 'whiteboard-clear'
+        }, ws);
+    }
+    
+    // Handle request for current whiteboard state
+    async function handleWhiteboardRequestState(ws, message) {
+        const { room } = message;
+        
+        // If we have stored state, send it
+        if (whiteboardStates.has(room)) {
+            ws.send(JSON.stringify({
+                type: 'whiteboard-state',
+                state: whiteboardStates.get(room)
+            }));
+        } else {
+            // Request state from another user in the room
+            const roomClients = rooms.get(room);
+            if (roomClients && roomClients.size > 1) {
+                for (const client of roomClients) {
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'whiteboard-request-state',
+                            requesterId: Date.now()
+                        }));
+                        break;
+                    }
+                }
+            }
         }
     }
     

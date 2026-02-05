@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 let isDrawing = false;
 let currentTool = 'pen';
 let currentColor = '#202124';
+window.currentColor = currentColor; // Expose for hand tracking
 const STROKE_WIDTH = 3;
 let lastX = 0;
 let lastY = 0;
@@ -50,6 +51,12 @@ toolButtons.forEach(button => {
             return;
         }
 
+        if (tool === 'hand') {
+            // Hand tracking is handled by handtracking.js
+            // Don't interfere with its click handler
+            return;
+        }
+
         if (tool === 'eraser') {
             isEraser = true;
             currentTool = 'pen';
@@ -69,6 +76,7 @@ const colorPreview = document.getElementById('colorPreview');
 if (colorInput && colorPreview) {
     colorInput.addEventListener('input', (e) => {
         currentColor = e.target.value;
+        window.currentColor = currentColor; // Update global for hand tracking
         colorPreview.style.backgroundColor = currentColor;
     });
 }
@@ -114,6 +122,21 @@ function draw(e) {
             ctx.moveTo(lastX, lastY);
             ctx.lineTo(x, y);
             ctx.stroke();
+            
+            // Broadcast pen stroke
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    tool: 'pen',
+                    fromX: lastX,
+                    fromY: lastY,
+                    toX: x,
+                    toY: y,
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH,
+                    isEraser: isEraser
+                });
+            }
+            
             [lastX, lastY] = [x, y];
             break;
 
@@ -152,12 +175,22 @@ function stopDrawing() {
 
     // Save the final state after drawing is complete
     savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Send full canvas state after drawing completes (for shapes)
+    if (currentTool !== 'pen' && typeof sendCanvasState === 'function') {
+        sendCanvasState();
+    }
 }
 
 function clearCanvas() {
     if (confirm('Clear the entire whiteboard?')) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Broadcast clear action
+        if (typeof broadcastClear === 'function') {
+            broadcastClear();
+        }
     }
 }
 
