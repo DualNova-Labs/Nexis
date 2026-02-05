@@ -331,7 +331,6 @@ function setupWebSocket(server) {
         }
     }
     
-<<<<<<< HEAD
     // Handle whiteboard join - send current canvas state to new user
     async function handleWhiteboardJoin(ws, message) {
         const { room } = message;
@@ -429,10 +428,9 @@ function setupWebSocket(server) {
             }
         }
     }
-=======
+    
     // Return the broadcast function for use in HTTP routes
     return broadcastToRoom;
->>>>>>> 5368a196ca8c6d7ecc518c6a23d41cd8bbf4a465
 }
 
 module.exports = { setupWebSocket };
