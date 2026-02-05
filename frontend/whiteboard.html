@@ -10,22 +10,30 @@
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Gochi+Hand&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 
     <style>
         :root {
             --primary: #1a73e8;
             --primary-hover: #1557b0;
-            --bg-light: #f8f9fa;
+            --google-blue: #4285F4;
+            --google-red: #EA4335;
+            --google-yellow: #FBBC05;
+            --google-green: #34A853;
+            --bg-dark: #202124;
+            --bg-darker: #171717;
             --surface: #ffffff;
+            --surface-dark: #3c4043;
             --text-dark: #202124;
+            --text-light: #e8eaed;
             --text-gray: #5f6368;
             --border: #dadce0;
-            --accent: #ea4335;
-            --radius-lg: 16px;
-            --radius-md: 12px;
+            --radius-full: 50px;
+            --radius-lg: 8px;
             --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+            --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
 
         * {
@@ -36,134 +44,379 @@
         }
 
         body {
-            background-color: var(--bg-light);
+            background-color: #f9f9f9;
             color: var(--text-dark);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            margin: 0;
         }
 
-        /* --- Navbar --- */
-        .navbar {
+        body.whiteboard-active {
+            background-color: #f1f3f4;
+        }
+
+        .page-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.05;
+        }
+
+        /* --- Top Bar (Google Meet Style) --- */
+        .top-bar {
             background: var(--surface);
-            padding: 12px 24px;
+            padding: 16px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: background 0.3s;
         }
 
-        .nav-left {
+        .whiteboard-active .top-bar {
+            background: var(--surface);
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .top-bar-left {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 20px;
         }
 
-        .back-btn {
+        .top-bar-center {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-gray);
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-dark);
             text-decoration: none;
+        }
+
+        .whiteboard-active .logo {
+            color: var(--text-dark);
+        }
+
+        .logo i {
+            font-size: 24px;
+            color: var(--google-blue);
+        }
+
+        .room-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f1f3f4;
+            border-radius: var(--radius-full);
             font-size: 14px;
             font-weight: 500;
-            padding: 8px 12px;
-            border-radius: 4px;
-            transition: 0.2s;
         }
 
-        .back-btn:hover {
-            background: #f1f3f4;
-            color: var(--text-dark);
-        }
-
-        .logo-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            color: var(--text-dark);
-            font-size: 20px;
-            font-weight: 500;
-        }
-
-        .logo-icon {
-            color: var(--accent);
-            font-size: 24px;
-        }
-
-        /* --- Whiteboard Area --- */
-        .board-container {
-            flex-grow: 1;
-            position: relative;
-            background-color: #ffffff;
-            /* Pure white for canvas */
-            background-image:
-                radial-gradient(#e0e0e0 1px, transparent 1px);
-            background-size: 30px 30px;
-            /* Subtle grid pattern */
-        }
-
-        #canvas {
-            display: block;
-            cursor: crosshair;
-        }
-
-        /* --- Toolbar --- */
-        .v-toolbar {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--surface);
-            padding: 8px;
-            border-radius: 32px;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 50;
-        }
-
-        .tool-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: none;
-            background: none;
-            color: var(--text-gray);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .tool-btn:hover {
-            background: #f1f3f4;
-            color: var(--text-dark);
-        }
-
-        .tool-btn.active {
+        .whiteboard-active .room-info {
             background: #e8f0fe;
+            color: var(--text-dark);
+        }
+
+        .room-code {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
             color: var(--primary);
         }
 
-        .color-picker-tool {
-            position: relative;
-            width: 44px;
-            height: 44px;
-            padding: 8px;
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
         }
 
-        .color-preview {
+        .icon-button:hover {
+            background: #f1f3f4;
+        }
+
+        .whiteboard-active .icon-button {
+            color: var(--text-gray);
+        }
+
+        .whiteboard-active .icon-button:hover {
+            background: #f1f3f4;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-gray);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: var(--radius-lg);
+            transition: 0.2s;
+        }
+
+        .back-link:hover {
+            background: #f1f3f4;
+        }
+
+        .whiteboard-active .back-link {
+            color: var(--text-gray);
+        }
+
+        .whiteboard-active .back-link:hover {
+            background: #f1f3f4;
+        }
+
+        /* --- Selection Screen --- */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .room-selection {
+            width: 100%;
+            max-width: 480px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .room-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 48px 40px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            text-align: center;
+        }
+
+        .room-icon-wrapper {
+            width: 72px;
+            height: 72px;
+            background: #e8f0fe;
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .room-icon-wrapper i {
+            font-size: 36px;
+        }
+
+        .room-title {
+            font-size: 28px;
+            font-weight: 400;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        .room-desc {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .room-id-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 32px;
+            border: 1px solid var(--border);
+        }
+
+        .room-id-label {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 500;
+        }
+
+        .room-id-value {
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--text-dark);
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .room-input {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 16px;
+            margin-bottom: 24px;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+        .room-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Whiteboard Interface --- */
+        .whiteboard-container {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 32px;
+            position: relative;
+        }
+
+        #canvas {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: crosshair;
             width: 100%;
             height: 100%;
+        }
+
+        /* --- Bottom Control Bar (Google Meet Style) --- */
+        .bottom-controls {
+            background: var(--surface);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .whiteboard-active .bottom-controls {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .controls-left,
+        .controls-center,
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls-center {
+            gap: 4px;
+        }
+
+        .control-btn {
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 0 1px #dadce0;
+            border: none;
+            background: #f1f3f4;
+            color: var(--text-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .control-btn:hover {
+            background: #e8eaed;
+        }
+
+        .control-btn.active {
+            background: var(--primary);
+        }
+
+        .control-btn.active:hover {
+            background: var(--primary-hover);
+        }
+
+        .control-btn i {
+            font-size: 24px;
+        }
+
+        .control-btn-label {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: var(--text-gray);
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        .color-picker-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #dadce0;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
         }
 
         .color-input {
@@ -176,124 +429,94 @@
             cursor: pointer;
         }
 
-        /* --- Room Info Overlay --- */
-        .overlay-card {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: var(--surface);
-            padding: 12px 20px;
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            z-index: 50;
+        .divider {
+            width: 1px;
+            height: 32px;
+            background: var(--border);
+            margin: 0 8px;
         }
 
-        .room-tag {
-            background: #fce8e6;
-            color: var(--accent);
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .copy-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-gray);
+        .end-btn {
+            padding: 12px 24px;
+            background: var(--google-red);
+            color: white;
+            border: none;
+            border-radius: var(--radius-full);
             font-size: 14px;
-        }
-
-        .copy-btn {
-            background: none;
-            border: none;
-            color: var(--text-gray);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .copy-btn:hover {
-            color: var(--primary);
-        }
-
-        .participants-mini {
-            display: flex;
-            align-items: center;
-            margin-left: 12px;
-            border-left: 1px solid var(--border);
-            padding-left: 16px;
-        }
-
-        .p-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: #e8eaed;
-            border: 2px solid white;
-            margin-left: -8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 600;
-        }
-
-        .bottom-actions {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            display: flex;
-            gap: 12px;
-            z-index: 50;
-        }
-
-        .fab {
-            height: 48px;
-            padding: 0 20px;
-            background: var(--surface);
-            border-radius: 24px;
-            border: none;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            align-items: center;
-            gap: 8px;
             font-weight: 500;
             cursor: pointer;
             transition: 0.2s;
         }
 
-        .fab:hover {
-            box-shadow: var(--shadow-hover);
-            transform: translateY(-2px);
+        .end-btn:hover {
+            background: #d93025;
         }
 
-        .fab.primary {
-            background: var(--primary);
+        /* --- Tooltips --- */
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
             color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            margin-bottom: 8px;
         }
 
-        @media (max-width: 600px) {
-            .v-toolbar {
-                left: 50%;
-                top: auto;
-                bottom: 24px;
-                transform: translateX(-50%);
-                flex-direction: row;
+        .control-btn:hover .tooltip,
+        .icon-button:hover .tooltip {
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
             }
 
-            .overlay-card {
-                top: 70px;
-                right: 16px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 12px 16px;
             }
 
-            .bottom-actions {
-                bottom: 85px;
-                right: 16px;
-                flex-direction: column;
+            .top-bar-center {
+                display: none;
+            }
+
+            .bottom-controls {
+                padding: 16px;
+            }
+
+            .controls-left,
+            .controls-right {
+                display: none;
+            }
+
+            .control-btn {
+                width: 48px;
+                height: 48px;
+            }
+
+            .control-btn i {
+                font-size: 20px;
+            }
+
+            .canvas-wrapper {
+                padding: 12px;
             }
         }
     </style>
@@ -301,103 +524,224 @@
 
 <body>
 
-    <nav class="navbar">
-        <div class="nav-left">
-            <a href="dashboard.html" class="back-btn">
+    <div class="page-bg"></div>
+
+    <!-- Top Bar -->
+    <div class="top-bar" id="topBar">
+        <div class="top-bar-left">
+            <a href="dashboard.html" class="back-link">
                 <i class="material-icons-outlined">arrow_back</i>
-                Back to Dashboard
+                <span>Dashboard</span>
             </a>
         </div>
-        <a href="#" class="logo-box">
-            <span class="material-icons-outlined logo-icon">gesture</span>
-            <span>Nexis Board</span>
-        </a>
-        <div style="width: 100px;"></div>
-    </nav>
-
-    <div class="board-container">
-        <!-- Floating Toolbar -->
-        <div class="v-toolbar">
-            <button class="tool-btn active" data-tool="pen" title="Pen">
-                <i class="material-icons-outlined">edit</i>
-            </button>
-            <button class="tool-btn" data-tool="line" title="Line">
-                <i class="material-icons-outlined">horizontal_rule</i>
-            </button>
-            <button class="tool-btn" data-tool="rectangle" title="Rectangle">
-                <i class="material-icons-outlined">check_box_outline_blank</i>
-            </button>
-            <button class="tool-btn" data-tool="circle" title="Circle">
-                <i class="material-icons-outlined">radio_button_unchecked</i>
-            </button>
-            <div class="color-picker-tool" title="Color">
-                <div class="color-preview" id="colorPreview" style="background: #202124;"></div>
-                <input type="color" class="color-input" id="colorInput" value="#202124">
-            </div>
-            <div style="height: 1px; background: #dadce0; margin: 4px 0;"></div>
-            <button class="tool-btn" data-tool="clear" title="Clear All">
-                <i class="material-icons-outlined">delete_outline</i>
-            </button>
+        <div class="top-bar-center">
+            <a href="#" class="logo">
+                <i class="material-icons-outlined">draw</i>
+                <span>Nexis Whiteboard</span>
+            </a>
         </div>
-
-        <!-- Room Overlay -->
-        <div class="overlay-card">
-            <span class="room-tag">LIVE BOARD</span>
-            <div class="copy-info">
-                <span>Room ID: <strong id="roomId">WB-7281</strong></span>
-                <button onclick="copyRoomId()" class="copy-btn">
-                    <i class="material-icons-outlined" style="font-size: 18px;">content_copy</i>
+        <div class="top-bar-right">
+            <div class="room-info" id="roomInfoDisplay" style="display: none;">
+                <span>Room:</span>
+                <span class="room-code" id="topRoomCode">WB-1234</span>
+                <button class="icon-button" onclick="copyRoomId()" title="Copy room code">
+                    <i class="material-icons-outlined">content_copy</i>
                 </button>
             </div>
-            <div class="participants-mini">
-                <div class="p-avatar" style="background: #fce8e6; color: #ea4335;">A</div>
-                <div class="p-avatar" style="background: #e8f0fe; color: #1a73e8;">B</div>
-                <div class="p-avatar">+1</div>
-            </div>
-        </div>
-
-        <!-- Bottom Actions -->
-        <div class="bottom-actions">
-            <button class="fab" data-tool="save">
-                <i class="material-icons-outlined">file_download</i>
-                Export
-            </button>
-            <button class="fab primary">
-                <i class="material-icons-outlined">share</i>
-                Share
+            <button class="icon-button" title="Settings">
+                <i class="material-icons-outlined">settings</i>
             </button>
         </div>
-
-        <!-- Canvas -->
-        <canvas id="canvas"></canvas>
     </div>
 
+    <!-- Selection Container -->
+    <div class="main-container" id="selectionContainer">
+        <div class="room-selection">
+            <!-- Create Room Section -->
+            <div id="createRoom" class="room-card" style="display: none;">
+                <div class="room-icon-wrapper">
+                    <i class="material-icons-outlined">draw</i>
+                </div>
+                <h1 class="room-title">Create Whiteboard</h1>
+                <p class="room-desc">Start a new collaborative whiteboard session and invite others to join.</p>
+                <div class="room-id-box">
+                    <p class="room-id-label">Your Room Code</p>
+                    <p id="newRoomId" class="room-id-value">WB-7281</p>
+                </div>
+                <button onclick="enterRoom()" class="btn-primary">Start Whiteboard</button>
+            </div>
+
+            <!-- Join Room Section -->
+            <div id="joinRoom" class="room-card" style="display: none;">
+                <div class="room-icon-wrapper">
+                    <i class="material-icons-outlined">meeting_room</i>
+                </div>
+                <h1 class="room-title">Join Whiteboard</h1>
+                <p class="room-desc">Enter the room code to join an existing whiteboard session.</p>
+                <input type="text" id="roomIdInput" class="room-input" placeholder="Enter room code (e.g., WB-1234)">
+                <button onclick="joinExistingRoom()" class="btn-primary">Join Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Whiteboard Interface -->
+    <div class="whiteboard-container" id="whiteboardContainer">
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="bottom-controls">
+            <div class="controls-left">
+                <button class="icon-button" onclick="showParticipants()" title="Participants">
+                    <i class="material-icons-outlined">people</i>
+                </button>
+                <button class="icon-button" onclick="showChat()" title="Chat">
+                    <i class="material-icons-outlined">chat</i>
+                </button>
+            </div>
+
+            <div class="controls-center">
+                <button class="control-btn active" data-tool="pen" title="Pen">
+                    <i class="material-icons-outlined">edit</i>
+                </button>
+                <button class="control-btn" data-tool="line" title="Line">
+                    <i class="material-icons-outlined">horizontal_rule</i>
+                </button>
+                <button class="control-btn" data-tool="rectangle" title="Rectangle">
+                    <i class="material-icons-outlined">crop_square</i>
+                </button>
+                <button class="control-btn" data-tool="circle" title="Circle">
+                    <i class="material-icons-outlined">panorama_fish_eye</i>
+                </button>
+
+                <div class="divider"></div>
+
+                <div class="color-picker-btn" id="colorPreview" style="background: #202124;">
+                    <input type="color" class="color-input" id="colorInput" value="#202124">
+                </div>
+
+                <div class="divider"></div>
+
+                <button class="control-btn" data-tool="eraser" title="Eraser">
+                    <i class="material-icons-outlined">ink_eraser</i>
+                </button>
+                <button class="control-btn" data-tool="clear" title="Clear all">
+                    <i class="material-icons-outlined">delete_sweep</i>
+                </button>
+            </div>
+
+            <div class="controls-right">
+                <button class="icon-button" data-tool="save" title="Download">
+                    <i class="material-icons-outlined">download</i>
+                </button>
+                <button class="end-btn" onclick="leaveWhiteboard()">Leave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Logic -->
     <script src="Scripts/whiteboard.js"></script>
     <script>
-        function copyRoomId() {
-            const roomId = document.getElementById('roomId').textContent;
-            navigator.clipboard.writeText(roomId);
-            const icon = document.querySelector('.copy-btn i');
-            icon.textContent = 'check';
-            setTimeout(() => icon.textContent = 'content_copy', 2000);
-        }
+        let currentRoomId = '';
 
-        // Color preview sync
-        const colorInput = document.getElementById('colorInput');
-        const colorPreview = document.getElementById('colorPreview');
-        colorInput.addEventListener('input', (e) => {
-            colorPreview.style.background = e.target.value;
+        document.addEventListener('DOMContentLoaded', () => {
+            const generatedId = "WB-" + Math.floor(1000 + Math.random() * 9000);
+            currentRoomId = generatedId;
+
+            const newRoomIdEl = document.getElementById('newRoomId');
+            const topRoomCodeEl = document.getElementById('topRoomCode');
+
+            if (newRoomIdEl) newRoomIdEl.textContent = generatedId;
+            if (topRoomCodeEl) topRoomCodeEl.textContent = generatedId;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            const roomFromUrl = urlParams.get('room');
+
+            const createRoomCard = document.getElementById('createRoom');
+            const joinRoomCard = document.getElementById('joinRoom');
+            const roomIdInput = document.getElementById('roomIdInput');
+
+            if (action === 'join') {
+                if (joinRoomCard) joinRoomCard.style.display = 'block';
+                if (roomFromUrl && roomIdInput) {
+                    roomIdInput.value = roomFromUrl;
+                }
+            } else {
+                if (createRoomCard) createRoomCard.style.display = 'block';
+            }
+
+            const colorInput = document.getElementById('colorInput');
+            const colorPreview = document.getElementById('colorPreview');
+            if (colorInput && colorPreview) {
+                colorInput.addEventListener('input', (e) => {
+                    colorPreview.style.backgroundColor = e.target.value;
+                    if (typeof currentColor !== 'undefined') currentColor = e.target.value;
+                });
+            }
         });
 
-        // Tool button switching
-        const toolBtns = document.querySelectorAll('.tool-btn');
-        toolBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (btn.dataset.tool === 'clear' || btn.dataset.tool === 'save') return;
-                toolBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        window.enterRoom = function () {
+            const selectionContainer = document.getElementById('selectionContainer');
+            const whiteboardContainer = document.getElementById('whiteboardContainer');
+            const roomInfoDisplay = document.getElementById('roomInfoDisplay');
+
+            if (selectionContainer) selectionContainer.style.display = 'none';
+            if (whiteboardContainer) whiteboardContainer.style.display = 'flex';
+            if (roomInfoDisplay) roomInfoDisplay.style.display = 'flex';
+
+            document.body.classList.add('whiteboard-active');
+
+            setTimeout(() => {
+                if (typeof resizeCanvas === 'function') resizeCanvas();
+            }, 100);
+        };
+
+        window.joinExistingRoom = function () {
+            const roomIdInput = document.getElementById('roomIdInput');
+            if (!roomIdInput) return;
+
+            const id = roomIdInput.value.trim();
+            if (!id) {
+                alert("Please enter a room code");
+                return;
+            }
+
+            currentRoomId = id;
+            const topRoomCodeEl = document.getElementById('topRoomCode');
+            if (topRoomCodeEl) topRoomCodeEl.textContent = id;
+
+            enterRoom();
+        };
+
+        window.copyRoomId = function () {
+            navigator.clipboard.writeText(currentRoomId).then(() => {
+                const btn = event.target.closest('button');
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    const originalIcon = icon.textContent;
+                    icon.textContent = 'done';
+                    setTimeout(() => {
+                        icon.textContent = originalIcon;
+                    }, 2000);
+                }
             });
-        });
+        };
+
+        window.leaveWhiteboard = function () {
+            if (confirm('Are you sure you want to leave this whiteboard session?')) {
+                window.location.href = 'dashboard.html';
+            }
+        };
+
+        window.showParticipants = function () {
+            alert('Participants panel - Coming soon!');
+        };
+
+        window.showChat = function () {
+            alert('Chat panel - Coming soon!');
+        };
     </script>
 </body>
 
