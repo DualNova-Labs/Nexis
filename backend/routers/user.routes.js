@@ -154,6 +154,26 @@ router.post("/logout", authenticate, async (req, res) => {
 // ADMIN ROUTES
 router.get("/admin/stats", authenticate, isAdmin, async (req, res) => {
   try {
+    const INACTIVE_THRESHOLD = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const now = new Date();
+
+    // Mark inactive users as offline (users who closed browser without logout)
+    const inactiveUsers = await userModel.find({
+      isOnline: true,
+      lastLogin: { $lt: new Date(now - INACTIVE_THRESHOLD) }
+    });
+
+    for (const user of inactiveUsers) {
+      // Calculate session time before marking offline
+      if (user.lastLogin) {
+        const sessionDuration = (now - new Date(user.lastLogin)) / 1000;
+        user.totalTimeSpent = (user.totalTimeSpent || 0) + Math.floor(sessionDuration);
+      }
+      user.isOnline = false;
+      user.activeToken = null;
+      await user.save();
+    }
+
     const query = { role: { $ne: 'admin' } };
     const totalUsers = await userModel.countDocuments(query);
     const activeUsers = await userModel.countDocuments({ ...query, isOnline: true });

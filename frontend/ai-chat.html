@@ -131,6 +131,7 @@
             pointer-events: none;
         }
 
+        /* Animated Hamburger Button */
         .sidebar-toggle {
             width: 40px;
             height: 40px;
@@ -141,16 +142,35 @@
             justify-content: center;
             cursor: pointer;
             border-radius: 50%;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            margin-right: -8px;
         }
 
         .sidebar-toggle:hover {
             background: #f1f3f4;
+            transform: scale(1.05);
+        }
+
+        .sidebar-toggle:active {
+            transform: scale(0.95);
         }
 
         .sidebar-toggle i {
             font-size: 24px;
             color: var(--text-dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-toggle.active {
+            background: var(--ai-accent);
+            transform: translateX(-4px);
+        }
+
+        .sidebar-toggle.active i {
+            color: white;
+            transform: rotate(180deg);
         }
 
         /* Overlay backdrop */
@@ -726,8 +746,19 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const toggleBtn = document.querySelector('.sidebar-toggle');
+            const icon = toggleBtn.querySelector('i');
+            
             sidebar.classList.toggle('closed');
             overlay.classList.toggle('active');
+            toggleBtn.classList.toggle('active');
+            
+            // Change icon based on state
+            if (sidebar.classList.contains('closed')) {
+                icon.textContent = 'menu';
+            } else {
+                icon.textContent = 'close';
+            }
         }
     </script>
 </body>
