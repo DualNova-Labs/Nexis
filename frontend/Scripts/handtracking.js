@@ -211,10 +211,30 @@ function onHandResults(results) {
             // Start a new path on the main canvas
             mainCtx.beginPath();
             mainCtx.moveTo(smoothedX, smoothedY);
+            
+            // Store start position for broadcast
+            lastHandPosition = { x: smoothedX, y: smoothedY };
         } else {
             // Continue drawing
             mainCtx.lineTo(smoothedX, smoothedY);
             mainCtx.stroke();
+            
+            // Broadcast hand draw stroke to other users
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    tool: 'pen',
+                    fromX: lastHandPosition.x,
+                    fromY: lastHandPosition.y,
+                    toX: smoothedX,
+                    toY: smoothedY,
+                    color: window.currentColor || '#202124',
+                    lineWidth: 3,
+                    isEraser: false
+                });
+            }
+            
+            // Update last position for next segment
+            lastHandPosition = { x: smoothedX, y: smoothedY };
         }
     } else {
         if (isDrawingWithHand) {
