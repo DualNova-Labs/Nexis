@@ -249,4 +249,18 @@ router.get('/chat/list', async (req, res) => {
     }
 });
 
+// Delete a chat
+router.delete('/chat/:chatId', async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        chatHistory.delete(chatId);
+        chatMetadata.delete(chatId);
+        console.log('Chat session deleted:', chatId);
+        res.json({ ok: true });
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        res.status(500).json({ ok: false, error: error.message });
+    }
+});
+
 module.exports = router;

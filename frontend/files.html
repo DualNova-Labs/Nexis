@@ -21,8 +21,8 @@
             --primary: #1a73e8;
             --primary-hover: #1557b0;
             --primary-light: #e8f0fe;
-            --bg-main: #f8f9fa;
-            --bg-white: #ffffff;
+            --bg-main: #ffffff;
+            --bg-secondary: #f8f9fa;
             --text-primary: #202124;
             --text-secondary: #5f6368;
             --text-disabled: #80868b;
@@ -33,9 +33,8 @@
             --radius-sm: 4px;
             --radius-md: 8px;
             --radius-lg: 12px;
-            --accent-orange: #f29900;
-            --accent-blue: #1a73e8;
             --success: #1e8e3e;
+            --danger: #d93025;
         }
 
         * {
@@ -52,18 +51,17 @@
             overflow-x: hidden;
         }
 
-        /* --- Header/Navbar --- */
+        /* --- Header/Navbar - Google Meet Style --- */
         .header {
-            background: var(--bg-white);
+            background: var(--bg-main);
             border-bottom: 1px solid var(--border-light);
-            padding: 16px 24px;
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         .header-left {
@@ -86,7 +84,7 @@
         }
 
         .back-link:hover {
-            background: var(--bg-main);
+            background: var(--bg-secondary);
             color: var(--text-primary);
         }
 
@@ -101,18 +99,16 @@
 
         .branding-icon {
             font-size: 28px;
-            color: var(--accent-orange);
+            color: var(--primary);
         }
 
-        /* --- Room Code Banner --- */
+        /* --- Room Code Banner - Clean White Style --- */
         .room-banner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px 24px;
+            background: #ffffff;
+            padding: 8px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
         .room-info {
@@ -122,7 +118,7 @@
         }
 
         .room-code-display {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--bg-secondary);
             padding: 8px 16px;
             border-radius: var(--radius-sm);
             font-weight: 500;
@@ -134,9 +130,9 @@
         }
 
         .btn-copy {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
+            background: var(--bg-main);
+            border: 1px solid var(--border-medium);
+            color: var(--text-secondary);
             padding: 8px 16px;
             border-radius: var(--radius-sm);
             cursor: pointer;
@@ -149,13 +145,15 @@
         }
 
         .btn-copy:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .btn-change-room {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
+            background: var(--bg-main);
+            border: 1px solid var(--border-medium);
+            color: var(--text-secondary);
             padding: 8px 16px;
             border-radius: var(--radius-sm);
             cursor: pointer;
@@ -168,13 +166,15 @@
         }
 
         .btn-change-room:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .btn-exit-room {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
+            background: var(--bg-main);
+            border: 1px solid var(--danger);
+            color: var(--danger);
             padding: 8px 16px;
             border-radius: var(--radius-sm);
             cursor: pointer;
@@ -187,17 +187,18 @@
         }
 
         .btn-exit-room:hover {
-            background: rgba(244, 67, 54, 0.9);
+            background: var(--danger);
+            color: white;
         }
 
-        /* Participants Display - Video Call Style */
+        /* Participants Display - Clean Style */
         .participants-display {
             display: flex;
             align-items: center;
             gap: 8px;
             margin-left: 16px;
             padding-left: 16px;
-            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            border-left: 1px solid var(--border-light);
         }
 
         .participants-avatars {
@@ -209,7 +210,7 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary);
             color: white;
             display: flex;
             align-items: center;
@@ -232,7 +233,7 @@
 
         .participants-count {
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--text-secondary);
             font-weight: 500;
         }
 
@@ -256,16 +257,16 @@
             margin-bottom: 40px;
         }
 
-        /* --- Upload Section (Google Meet Style) --- */
+        /* --- Upload Section - Clean Google Meet Style --- */
         .upload-container {
-            background: var(--bg-white);
+            background: var(--bg-main);
             border-radius: var(--radius-lg);
             border: 2px dashed var(--border-medium);
             padding: 48px 32px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
             position: relative;
             overflow: hidden;
         }
@@ -278,28 +279,27 @@
         .upload-container.dragging {
             border-color: var(--primary);
             background: var(--primary-light);
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
 
         .upload-icon-circle {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 64px;
+            height: 64px;
+            background: var(--primary-light);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 24px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            margin: 0 auto 20px;
         }
 
         .upload-icon-circle i {
-            font-size: 40px;
-            color: white;
+            font-size: 32px;
+            color: var(--primary);
         }
 
         .upload-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 500;
             margin-bottom: 8px;
             color: var(--text-primary);
@@ -314,14 +314,13 @@
         .btn-primary {
             background: var(--primary);
             color: white;
-            padding: 12px 32px;
+            padding: 12px 24px;
             border: none;
             border-radius: var(--radius-sm);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             font-family: 'Google Sans', 'Roboto', sans-serif;
         }
 
@@ -336,14 +335,14 @@
 
         /* --- Files Section --- */
         .files-section {
-            margin-top: 48px;
+            margin-top: 32px;
         }
 
         .section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 1px solid var(--border-light);
         }
@@ -362,21 +361,21 @@
             font-weight: 500;
         }
 
-        /* --- Files Grid (Google Meet Style Cards) --- */
+        /* --- Files Grid - Clean Cards --- */
         .files-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
         }
 
         .file-card {
-            background: var(--bg-white);
+            background: var(--bg-main);
             border: 1px solid var(--border-light);
             border-radius: var(--radius-md);
-            padding: 16px 20px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
@@ -385,7 +384,7 @@
         .file-card:hover {
             box-shadow: var(--shadow-1);
             border-color: var(--border-medium);
-            transform: translateY(-2px);
+            background: var(--bg-secondary);
         }
 
         .file-card.uploading {
@@ -393,61 +392,63 @@
             pointer-events: none;
         }
 
-        /* File Icon Styling */
+        /* File Icon Styling - Clean Flat Design */
         .file-icon {
             width: 40px;
             height: 40px;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 24px;
+            font-size: 20px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
         }
 
         .file-icon.image {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+            background: #fce8e6;
+            color: #ea4335;
         }
 
         .file-icon.video {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
+            background: #e8f0fe;
+            color: #4285f4;
         }
 
         .file-icon.audio {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
+            background: #e6f4ea;
+            color: #34a853;
         }
 
         .file-icon.pdf {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: white;
+            background: #fce8e6;
+            color: #ea4335;
         }
 
         .file-icon.document {
-            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-            color: white;
+            background: #e8f0fe;
+            color: #4285f4;
         }
 
         .file-icon.spreadsheet {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            color: #333;
+            background: #e6f4ea;
+            color: #34a853;
         }
 
         .file-icon.presentation {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: #333;
+            background: #fef3e8;
+            color: #f9ab00;
         }
 
         .file-icon.archive {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f1f3f4;
+            color: #5f6368;
         }
 
         .file-icon.default {
-            background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
-            color: #333;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
         }
 
         /* File Details */
@@ -523,38 +524,38 @@
             color: #d32f2f;
         }
 
-        /* Empty State */
+        /* Empty State - Clean Style */
         .empty-state {
             text-align: center;
-            padding: 80px 40px;
+            padding: 64px 40px;
             color: var(--text-secondary);
-            background: var(--bg-white);
+            background: var(--bg-secondary);
             border-radius: var(--radius-lg);
             border: 1px solid var(--border-light);
         }
 
         .empty-icon {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            width: 80px;
+            height: 80px;
+            background: var(--bg-main);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 24px;
+            margin: 0 auto 16px;
+            border: 1px solid var(--border-light);
         }
 
         .empty-icon i {
-            font-size: 64px;
+            font-size: 40px;
             color: var(--text-disabled);
-            opacity: 0.5;
         }
 
         .empty-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 500;
             color: var(--text-primary);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .empty-subtitle {
@@ -579,7 +580,7 @@
             animation: pulse 1.5s ease-in-out infinite;
         }
 
-        /* --- Modal --- */
+        /* --- Modal - Clean Style --- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -602,13 +603,13 @@
         }
 
         .modal {
-            background: var(--bg-white);
+            background: var(--bg-main);
             border-radius: var(--radius-lg);
-            padding: 32px;
-            max-width: 500px;
+            padding: 24px;
+            max-width: 480px;
             width: 90%;
             box-shadow: var(--shadow-2);
-            transform: scale(0.9);
+            transform: scale(0.95);
             transition: transform 0.3s;
         }
 
@@ -617,7 +618,7 @@
         }
 
         .modal-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 500;
             margin-bottom: 8px;
             color: var(--text-primary);
@@ -654,7 +655,7 @@
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
+            box-shadow: 0 0 0 2px var(--primary-light);
         }
 
         .modal-actions {
@@ -666,9 +667,9 @@
 
         .btn-secondary {
             background: transparent;
-            color: var(--text-primary);
+            color: var(--primary);
             padding: 10px 24px;
-            border: 1px solid var(--border-medium);
+            border: none;
             border-radius: var(--radius-sm);
             font-size: 14px;
             font-weight: 500;
@@ -677,14 +678,14 @@
         }
 
         .btn-secondary:hover {
-            background: var(--bg-main);
+            background: var(--primary-light);
         }
 
         .btn-generate {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
             padding: 8px 16px;
-            border: none;
+            border: 1px solid var(--border-medium);
             border-radius: var(--radius-sm);
             font-size: 13px;
             font-weight: 500;
@@ -693,7 +694,8 @@
         }
 
         .btn-generate:hover {
-            opacity: 0.9;
+            background: var(--border-light);
+            color: var(--text-primary);
         }
 
         /* Responsive Design */
@@ -769,12 +771,12 @@
     <!-- Room Code Banner -->
     <div class="room-banner" id="roomBanner" style="display: none;">
         <div class="room-info">
-            <span style="display: flex; align-items: center; gap: 8px;">
-                <i class="material-icons">meeting_room</i>
+            <span style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary);">
+                <i class="material-icons-outlined" style="font-size: 20px;">meeting_room</i>
                 Room Code:
             </span>
             <div class="room-code-display" id="roomCodeDisplay">
-                <i class="material-icons">vpn_key</i>
+                <i class="material-icons-outlined" style="font-size: 18px; color: var(--primary);">vpn_key</i>
                 <span id="currentRoomCode">-</span>
             </div>
             <button class="btn-copy" onclick="copyRoomCode()">
@@ -786,7 +788,7 @@
                 <span class="participants-count" id="participantsCount"></span>
             </div>
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 8px;">
             <button class="btn-change-room" onclick="showRoomModal()">
                 <i class="material-icons-outlined" style="font-size: 18px;">edit</i>
                 Change Room
@@ -807,7 +809,7 @@
         <!-- Upload Section -->
         <section class="upload-container" id="dropZone">
             <div class="upload-icon-circle">
-                <i class="material-icons">cloud_upload</i>
+                <i class="material-icons-outlined" style="font-size: 32px;">cloud_upload</i>
             </div>
             <h2 class="upload-title">Drag and drop files here</h2>
             <p class="upload-subtitle">or click the button below to browse from your computer</p>

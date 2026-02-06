@@ -83,15 +83,54 @@ function displayChatList(chats) {
     chats.forEach(chat => {
         const historyItem = document.createElement('div');
         historyItem.className = `history-item ${chat.chatId === currentChatId ? 'active' : ''}`;
-        historyItem.onclick = () => loadChat(chat.chatId);
 
         historyItem.innerHTML = `
-            <i class="material-icons-outlined">chat_bubble_outline</i>
-            <span>${chat.title || 'New Chat'}</span>
+            <div class="history-item-content" onclick="loadChat('${chat.chatId}')">
+                <i class="material-icons-outlined">chat_bubble_outline</i>
+                <span>${chat.title || 'New Chat'}</span>
+            </div>
+            <button class="delete-chat-btn" onclick="confirmDeleteChat(event, '${chat.chatId}')" title="Delete chat">
+                <i class="material-icons-outlined">delete_outline</i>
+            </button>
         `;
 
         historyList.appendChild(historyItem);
     });
+}
+
+// Confirm delete chat
+function confirmDeleteChat(event, chatIdToDelete) {
+    event.stopPropagation(); // Prevent loading the chat when clicking delete
+    if (confirm('Are you sure you want to delete this chat?')) {
+        deleteChat(chatIdToDelete);
+    }
+}
+
+// Delete a chat session
+async function deleteChat(chatIdToDelete) {
+    try {
+        const response = await fetch(`${API_URL}/api/ai/chat/${chatIdToDelete}`, {
+            method: 'DELETE',
+            ...API_CONFIG
+        });
+
+        const data = await response.json();
+        if (data.ok) {
+            console.log('Chat deleted successfully');
+            // If we deleted the current chat, start a new one
+            if (chatIdToDelete === currentChatId || chatIdToDelete === chatId) {
+                startNewChat();
+            } else {
+                // Just refresh the list
+                await loadChatList();
+            }
+        } else {
+            throw new Error(data.error || 'Failed to delete chat');
+        }
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        showError(`Failed to delete chat: ${error.message}`);
+    }
 }
 
 // Load a specific chat
