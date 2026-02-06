@@ -46,13 +46,13 @@ function showLockedState() {
     const filesGrid = document.getElementById('filesGrid');
     const fileCount = document.getElementById('fileCount');
     const roomBanner = document.getElementById('roomBanner');
-    
+
     // Hide room banner
     if (roomBanner) roomBanner.style.display = 'none';
-    
+
     // Update file count
     if (fileCount) fileCount.textContent = 'Locked';
-    
+
     // Show locked message
     if (filesGrid) {
         filesGrid.innerHTML = `
@@ -128,10 +128,10 @@ function updateRoomUI() {
 window.copyRoomCode = async function () {
     // Ensure document is focused
     window.focus();
-    
+
     const btn = document.querySelector('.btn-copy');
     const originalText = btn ? btn.innerHTML : '';
-    
+
     try {
         // Try modern clipboard API
         await navigator.clipboard.writeText(currentRoomCode);
@@ -145,7 +145,7 @@ window.copyRoomCode = async function () {
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        
+
         try {
             const successful = document.execCommand('copy');
             if (successful) {
@@ -184,7 +184,7 @@ window.exitRoom = function () {
     // Clear room code
     currentRoomCode = null;
     localStorage.removeItem('currentRoomCode');
-    
+
     // Reset UI to locked state
     showLockedState();
 }
@@ -449,17 +449,17 @@ function showUploadingState(filename) {
     }
 
     const uploadingCard = document.createElement('div');
-    uploadingCard.className = 'file-card uploading loading';
+    uploadingCard.className = 'file-card uploading uploading-pulse';
 
     const fileType = getFileType(filename);
 
     uploadingCard.innerHTML = `
-        <div class="file-icon ${fileType}">
+        <div class="file-icon-box ${fileType}">
             <i class="material-icons">cloud_upload</i>
         </div>
-        <div class="file-info">
+        <div class="file-details">
             <div class="file-name">${filename}</div>
-            <div class="file-metadata">
+            <div class="file-meta">
                 <span>Uploading...</span>
             </div>
         </div>
@@ -488,7 +488,7 @@ async function loadFiles() {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             // Handle access denied or other errors
             if (response.status === 403) {
@@ -497,7 +497,7 @@ async function loadFiles() {
             }
             throw new Error(data.error || 'Failed to load files');
         }
-        
+
         console.log('Files loaded:', data.files?.length || 0, 'files for room', roomCode);
         displayFiles(data.files);
     } catch (error) {
@@ -523,11 +523,11 @@ function displayFiles(files) {
     if (files.length === 0) {
         filesGrid.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">
+                <div class="empty-visual">
                     <i class="material-icons-outlined">folder_open</i>
                 </div>
-                <h3 class="empty-title">No files in this room yet</h3>
-                <p class="empty-subtitle">Upload your first file to get started</p>
+                <h3 style="font-size: 16px; font-weight: 500; margin-bottom: 4px;">No files shared yet</h3>
+                <p style="font-size: 14px; color: var(--text-secondary);">Your shared files will appear here for everyone in the room.</p>
             </div>
         `;
         fileCount.textContent = '0 files';
@@ -545,35 +545,26 @@ function displayFiles(files) {
 
         return `
             <div class="file-card" data-file-id="${file.id}">
-                <div class="file-icon ${fileType}">
+                <div class="file-icon-box ${fileType}">
                     <i class="material-icons">${icon}</i>
                 </div>
-                <div class="file-info">
+                <div class="file-details">
                     <div class="file-name" title="${file.filename}">${file.filename}</div>
-                    <div class="file-metadata">
-                        <span>
-                            <i class="material-icons-outlined" style="font-size: 14px;">storage</i>
-                            ${size}
-                        </span>
-                        <span class="metadata-separator"></span>
-                        <span>
-                            <i class="material-icons-outlined" style="font-size: 14px;">schedule</i>
-                            ${date}
-                        </span>
-                        <span class="metadata-separator"></span>
-                        <span>
-                            <i class="material-icons-outlined" style="font-size: 14px;">person</i>
-                            ${isOwner ? 'You' : file.uploadedBy.split('@')[0]}
-                        </span>
+                    <div class="file-meta">
+                        <span>${size}</span>
+                        <span class="meta-dot"></span>
+                        <span>${date}</span>
+                        <span class="meta-dot"></span>
+                        <span>${isOwner ? 'You' : file.uploadedBy.split('@')[0]}</span>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="action-btn" onclick="downloadFile('${file.id}', '${file.filename}')" title="Download">
+                    <button class="icon-btn" onclick="downloadFile('${file.id}', '${file.filename}')" title="Download">
                         <i class="material-icons-outlined">download</i>
                     </button>
                     ${isOwner ? `
-                    <button class="action-btn delete" onclick="deleteFile('${file.id}')" title="Delete">
-                        <i class="material-icons-outlined">delete</i>
+                    <button class="icon-btn danger" onclick="deleteFile('${file.id}')" title="Delete">
+                        <i class="material-icons-outlined" style="font-size: 20px;">delete</i>
                     </button>
                     ` : ''}
                 </div>

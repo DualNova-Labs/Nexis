@@ -4,15 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexis | File Sharing</title>
+    <title>Nexis | Secure File Sharing</title>
     <link rel="icon" type="image/png" href="Images/fav_icon.PNG">
 
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
@@ -28,326 +26,291 @@
             --text-disabled: #80868b;
             --border-light: #e8eaed;
             --border-medium: #dadce0;
-            --shadow-1: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
-            --shadow-2: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+            --shadow-md: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
             --radius-sm: 4px;
             --radius-md: 8px;
-            --radius-lg: 12px;
+            --radius-lg: 24px;
+            --radius-full: 9999px;
             --success: #1e8e3e;
             --danger: #d93025;
+            --google-blue: #1a73e8;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc04;
+            --google-green: #34a853;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
         }
 
         body {
-            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-main);
             color: var(--text-primary);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             overflow-x: hidden;
         }
 
-        /* --- Header/Navbar - Google Meet Style --- */
-        .header {
+        /* --- Navbar (Google Meet Style) --- */
+        .navbar {
             background: var(--bg-main);
-            border-bottom: 1px solid var(--border-light);
             padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-bottom: 1px solid var(--border-light);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-
-        .back-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            transition: all 0.2s;
-        }
-
-        .back-link:hover {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        .branding {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 22px;
-            font-weight: 500;
-            letter-spacing: -0.5px;
-        }
-
-        .branding-icon {
-            font-size: 28px;
-            color: var(--primary);
-        }
-
-        /* --- Room Code Banner - Clean White Style --- */
-        .room-banner {
-            background: #ffffff;
-            padding: 8px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .room-info {
+        .nav-left {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        .room-code-display {
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
             background: var(--bg-secondary);
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            font-weight: 500;
-            letter-spacing: 2px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            color: var(--text-primary);
         }
 
-        .btn-copy {
-            background: var(--bg-main);
-            border: 1px solid var(--border-medium);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .logo-icon {
+            color: var(--primary);
+            font-size: 28px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* --- Room Banner (Integrated) --- */
+        .room-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-secondary);
+            padding: 6px 16px;
+            border-radius: var(--radius-full);
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .btn-copy:hover {
-            background: var(--primary-light);
+        .room-code {
             color: var(--primary);
-            border-color: var(--primary);
+            font-weight: 600;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 1px;
         }
 
-        .btn-change-room {
-            background: var(--bg-main);
-            border: 1px solid var(--border-medium);
+        .room-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
             color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            transition: background 0.2s;
         }
 
-        .btn-change-room:hover {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--primary);
+        .icon-btn:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
         }
 
-        .btn-exit-room {
-            background: var(--bg-main);
-            border: 1px solid var(--danger);
+        .icon-btn.danger:hover {
+            background: #fee;
             color: var(--danger);
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .btn-exit-room:hover {
-            background: var(--danger);
-            color: white;
-        }
-
-        /* Participants Display - Clean Style */
-        .participants-display {
+        /* --- Participants Display --- */
+        .participants-box {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-left: 16px;
-            padding-left: 16px;
-            border-left: 1px solid var(--border-light);
+            padding-right: 12px;
+            border-right: 1px solid var(--border-medium);
         }
 
-        .participants-avatars {
+        .avatars-list {
             display: flex;
             align-items: center;
         }
 
-        .participant-avatar {
-            width: 32px;
-            height: 32px;
+        .avatar-circle {
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
             border: 2px solid white;
             margin-left: -8px;
-            transition: transform 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
-        .participant-avatar:first-child {
+        .avatar-circle:first-child {
             margin-left: 0;
         }
 
-        .participant-avatar:hover {
-            transform: scale(1.1);
-            z-index: 10;
-        }
-
-        .participants-count {
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* --- Main Container --- */
-        .container {
-            max-width: 1200px;
+        /* --- Main Content --- */
+        .main-content {
+            flex-grow: 1;
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 32px 24px;
+            width: 100%;
+            padding: 40px 24px;
         }
 
-        .page-title {
-            font-size: 32px;
+        .hero-section {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .hero-section h1 {
+            font-size: 36px;
             font-weight: 400;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             color: var(--text-primary);
         }
 
-        .page-subtitle {
-            font-size: 14px;
+        .hero-section p {
+            font-size: 16px;
             color: var(--text-secondary);
-            margin-bottom: 40px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        /* --- Upload Section - Clean Google Meet Style --- */
-        .upload-container {
+        /* --- Upload Card --- */
+        .upload-card {
             background: var(--bg-main);
-            border-radius: var(--radius-lg);
             border: 2px dashed var(--border-medium);
-            padding: 48px 32px;
+            border-radius: var(--radius-lg);
+            padding: 60px 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 48px;
             position: relative;
-            overflow: hidden;
         }
 
-        .upload-container:hover {
+        .upload-card:hover {
+            border-color: var(--primary);
+            background: rgba(26, 115, 232, 0.02);
+            transform: translateY(-2px);
+        }
+
+        .upload-card.dragging {
             border-color: var(--primary);
             background: var(--primary-light);
+            border-style: solid;
+            transform: scale(1.02);
         }
 
-        .upload-container.dragging {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            transform: scale(1.01);
-        }
-
-        .upload-icon-circle {
-            width: 64px;
-            height: 64px;
+        .upload-visual {
+            width: 80px;
+            height: 80px;
             background: var(--primary-light);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 20px;
+            margin: 0 auto 24px;
+            transition: transform 0.3s;
         }
 
-        .upload-icon-circle i {
-            font-size: 32px;
+        .upload-card:hover .upload-visual {
+            transform: scale(1.1);
+        }
+
+        .upload-visual i {
+            font-size: 40px;
             color: var(--primary);
         }
 
-        .upload-title {
-            font-size: 18px;
+        .upload-text h3 {
+            font-size: 20px;
             font-weight: 500;
             margin-bottom: 8px;
-            color: var(--text-primary);
         }
 
-        .upload-subtitle {
-            font-size: 14px;
+        .upload-text p {
             color: var(--text-secondary);
+            font-size: 14px;
             margin-bottom: 24px;
         }
 
-        .btn-primary {
+        .btn-google {
             background: var(--primary);
             color: white;
-            padding: 12px 24px;
+            padding: 12px 32px;
             border: none;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-full);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            font-family: 'Google Sans', 'Roboto', sans-serif;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        .btn-primary:hover {
+        .btn-google:hover {
             background: var(--primary-hover);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
         }
 
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        /* --- Files Section --- */
-        .files-section {
-            margin-top: 32px;
-        }
-
-        .section-header {
+        /* --- Files Grid --- */
+        .files-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
             padding-bottom: 12px;
             border-bottom: 1px solid var(--border-light);
         }
 
-        .section-title {
+        .files-header h2 {
             font-size: 14px;
             font-weight: 500;
             color: var(--text-secondary);
@@ -355,110 +318,95 @@
             letter-spacing: 0.8px;
         }
 
-        .file-count {
-            font-size: 13px;
-            color: var(--text-disabled);
-            font-weight: 500;
-        }
-
-        /* --- Files Grid - Clean Cards --- */
         .files-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
         }
 
         .file-card {
-            background: var(--bg-main);
+            background: white;
             border: 1px solid var(--border-light);
             border-radius: var(--radius-md);
-            padding: 12px 16px;
+            padding: 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            transition: all 0.2s ease;
-            cursor: pointer;
+            gap: 16px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            cursor: pointer;
         }
 
         .file-card:hover {
-            box-shadow: var(--shadow-1);
-            border-color: var(--border-medium);
             background: var(--bg-secondary);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--border-medium);
         }
 
-        .file-card.uploading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        /* File Icon Styling - Clean Flat Design */
-        .file-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-sm);
+        .file-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 20px;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
+            font-size: 24px;
         }
 
-        .file-icon.image {
+        /* Modernized Icon Colors */
+        .file-icon-box.image {
             background: #fce8e6;
+            color: #d93025;
+        }
+
+        .file-icon-box.video {
+            background: #e8f0fe;
+            color: #1a73e8;
+        }
+
+        .file-icon-box.audio {
+            background: #e6f4ea;
+            color: #1e8e3e;
+        }
+
+        .file-icon-box.pdf {
+            background: #fee;
             color: #ea4335;
         }
 
-        .file-icon.video {
+        .file-icon-box.document {
             background: #e8f0fe;
             color: #4285f4;
         }
 
-        .file-icon.audio {
+        .file-icon-box.spreadsheet {
             background: #e6f4ea;
             color: #34a853;
         }
 
-        .file-icon.pdf {
-            background: #fce8e6;
-            color: #ea4335;
-        }
-
-        .file-icon.document {
-            background: #e8f0fe;
-            color: #4285f4;
-        }
-
-        .file-icon.spreadsheet {
-            background: #e6f4ea;
-            color: #34a853;
-        }
-
-        .file-icon.presentation {
+        .file-icon-box.presentation {
             background: #fef3e8;
             color: #f9ab00;
         }
 
-        .file-icon.archive {
+        .file-icon-box.archive {
             background: #f1f3f4;
             color: #5f6368;
         }
 
-        .file-icon.default {
+        .file-icon-box.default {
             background: var(--bg-secondary);
             color: var(--text-secondary);
         }
 
-        /* File Details */
-        .file-info {
-            flex: 1;
+        .file-details {
+            flex-grow: 1;
             min-width: 0;
         }
 
         .file-name {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 500;
             color: var(--text-primary);
             margin-bottom: 4px;
@@ -467,7 +415,7 @@
             text-overflow: ellipsis;
         }
 
-        .file-metadata {
+        .file-meta {
             font-size: 12px;
             color: var(--text-secondary);
             display: flex;
@@ -475,20 +423,13 @@
             gap: 8px;
         }
 
-        .file-metadata span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .metadata-separator {
-            width: 2px;
-            height: 2px;
+        .meta-dot {
+            width: 3px;
+            height: 3px;
             background: var(--text-disabled);
             border-radius: 50%;
         }
 
-        /* File Actions */
         .file-actions {
             display: flex;
             gap: 4px;
@@ -500,101 +441,49 @@
             opacity: 1;
         }
 
-        .action-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .action-btn:hover {
-            background: var(--bg-main);
-            color: var(--text-primary);
-        }
-
-        .action-btn.delete:hover {
-            background: #fee;
-            color: #d32f2f;
-        }
-
-        /* Empty State - Clean Style */
+        /* --- Empty State --- */
         .empty-state {
+            grid-column: 1 / -1;
             text-align: center;
-            padding: 64px 40px;
-            color: var(--text-secondary);
+            padding: 80px 40px;
             background: var(--bg-secondary);
             border-radius: var(--radius-lg);
             border: 1px solid var(--border-light);
         }
 
-        .empty-icon {
+        .empty-visual {
             width: 80px;
             height: 80px;
-            background: var(--bg-main);
+            background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 16px;
-            border: 1px solid var(--border-light);
+            margin: 0 auto 24px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .empty-icon i {
+        .empty-visual i {
             font-size: 40px;
             color: var(--text-disabled);
         }
 
-        .empty-title {
-            font-size: 16px;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .empty-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* Loading State */
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .loading {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        /* --- Modal - Clean Style --- */
+        /* --- Modern Modals --- */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(32, 33, 36, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 2000;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(4px);
         }
 
         .modal-overlay.active {
@@ -602,269 +491,298 @@
             pointer-events: all;
         }
 
-        .modal {
-            background: var(--bg-main);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            max-width: 480px;
+        .modal-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
             width: 90%;
-            box-shadow: var(--shadow-2);
-            transform: scale(0.95);
-            transition: transform 0.3s;
+            max-width: 440px;
+            box-shadow: 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12), 0 11px 15px -7px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .modal-overlay.active .modal {
+        .modal-overlay.active .modal-card {
             transform: scale(1);
         }
 
-        .modal-title {
-            font-size: 20px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: var(--text-primary);
+        .modal-card h2 {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 12px;
         }
 
-        .modal-subtitle {
-            font-size: 14px;
+        .modal-card p {
             color: var(--text-secondary);
+            font-size: 15px;
             margin-bottom: 24px;
+            line-height: 1.5;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-        }
-
-        .form-input {
+        .input-google {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 16px;
             border: 1px solid var(--border-medium);
-            border-radius: var(--radius-sm);
-            font-size: 14px;
-            font-family: 'Roboto', sans-serif;
-            transition: all 0.2s;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            transition: border 0.2s;
         }
 
-        .form-input:focus {
+        .input-google:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px var(--primary-light);
+            border-width: 2px;
+            padding: 13px 15px;
         }
 
-        .modal-actions {
+        .modal-btns {
             display: flex;
-            gap: 12px;
             justify-content: flex-end;
-            margin-top: 24px;
+            gap: 12px;
+            margin-top: 12px;
         }
 
-        .btn-secondary {
+        .btn-text {
             background: transparent;
             color: var(--primary);
-            padding: 10px 24px;
+            padding: 10px 16px;
             border: none;
-            border-radius: var(--radius-sm);
+            border-radius: 4px;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.2s;
         }
 
-        .btn-secondary:hover {
+        .btn-text:hover {
             background: var(--primary-light);
         }
 
-        .btn-generate {
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border: 1px solid var(--border-medium);
-            border-radius: var(--radius-sm);
-            font-size: 13px;
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-generate:hover {
-            background: var(--border-light);
-            color: var(--text-primary);
+        .btn-action:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
+        /* --- Footer --- */
+        .footer {
+            padding: 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 12px 16px;
+            }
+
+            .main-content {
                 padding: 24px 16px;
             }
 
-            .files-grid {
-                grid-template-columns: 1fr;
+            .hero-section h1 {
+                font-size: 28px;
             }
 
-            .page-title {
-                font-size: 24px;
+            .room-status {
+                font-size: 12px;
+                padding: 4px 12px;
             }
 
-            .upload-container {
-                padding: 32px 24px;
-            }
-
-            .branding {
-                font-size: 18px;
-            }
-
-            .room-banner {
-                flex-direction: column;
-                gap: 12px;
-                align-items: flex-start;
+            .participants-box {
+                display: none;
             }
         }
 
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
+        /* Loading Animation */
+        .uploading-pulse {
+            animation: pulse 1.5s infinite;
+        }
 
-            to {
+        @keyframes pulse {
+            0% {
                 opacity: 1;
-                transform: translateY(0);
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
             }
         }
 
-        .file-card {
-            animation: fadeInUp 0.3s ease-out;
-        }
-
-        /* Hide file input */
+        /* Hide hidden inputs */
         #fileInput {
-            display: none !important;
+            display: none;
         }
     </style>
 </head>
 
 <body>
-
-    <!-- Header -->
-    <header class="header">
-        <div class="header-left">
-            <a href="dashboard.html" class="back-link">
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="dashboard.html" class="back-btn" title="Back to Dashboard">
                 <i class="material-icons-outlined">arrow_back</i>
-                Back to Dashboard
             </a>
+            <div class="logo-box">
+                <span class="material-icons logo-icon">folder_shared</span>
+                <span>Nexis Files</span>
+            </div>
         </div>
-        <div class="branding">
-            <span class="material-icons branding-icon">folder_shared</span>
-            <span>Nexis Files</span>
-        </div>
-        <div style="width: 150px;"></div>
-    </header>
 
-    <!-- Room Code Banner -->
-    <div class="room-banner" id="roomBanner" style="display: none;">
-        <div class="room-info">
-            <span style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary);">
-                <i class="material-icons-outlined" style="font-size: 20px;">meeting_room</i>
-                Room Code:
-            </span>
-            <div class="room-code-display" id="roomCodeDisplay">
-                <i class="material-icons-outlined" style="font-size: 18px; color: var(--primary);">vpn_key</i>
-                <span id="currentRoomCode">-</span>
+        <div class="nav-right" id="roomBanner" style="display: none;">
+            <div class="participants-box" id="participantsDisplay" style="display: none;">
+                <div class="avatars-list" id="participantsAvatars"></div>
+                <span style="font-size: 13px; color: var(--text-secondary); margin-left: 8px;"
+                    id="participantsCount"></span>
             </div>
-            <button class="btn-copy" onclick="copyRoomCode()">
-                <i class="material-icons-outlined" style="font-size: 18px;">content_copy</i>
-                Copy Code
-            </button>
-            <div class="participants-display" id="participantsDisplay" style="display: none;">
-                <div class="participants-avatars" id="participantsAvatars"></div>
-                <span class="participants-count" id="participantsCount"></span>
+
+            <div class="room-status">
+                <span id="roomCodeDisplay">
+                    Code: <span class="room-code" id="currentRoomCode">-</span>
+                </span>
+                <div class="room-actions">
+                    <button class="icon-btn" onclick="copyRoomCode()" title="Copy Code">
+                        <i class="material-icons-outlined" style="font-size: 20px;">content_copy</i>
+                    </button>
+                    <button class="icon-btn" onclick="showRoomModal()" title="Edit Room">
+                        <i class="material-icons-outlined" style="font-size: 20px;">edit</i>
+                    </button>
+                    <button class="icon-btn danger" onclick="exitRoom()" title="Exit Room">
+                        <i class="material-icons-outlined" style="font-size: 20px;">logout</i>
+                    </button>
+                </div>
             </div>
         </div>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn-change-room" onclick="showRoomModal()">
-                <i class="material-icons-outlined" style="font-size: 18px;">edit</i>
-                Change Room
-            </button>
-            <button class="btn-exit-room" onclick="exitRoom()">
-                <i class="material-icons-outlined" style="font-size: 18px;">logout</i>
-                Exit Room
-            </button>
-        </div>
-    </div>
+    </nav>
 
     <!-- Main Content -->
-    <div class="container">
-        <h1 class="page-title">Shared Files</h1>
-        <p class="page-subtitle">Upload and access files using a room code. Share the code with others to collaborate!
-        </p>
+    <main class="main-content">
+        <section class="hero-section">
+            <h1>Secure, private file sharing</h1>
+            <p>Join a room to instantly share and collaborate on files with your team. Everything is end-to-end
+                encrypted and automatically cleaned up.</p>
+        </section>
 
-        <!-- Upload Section -->
-        <section class="upload-container" id="dropZone">
-            <div class="upload-icon-circle">
-                <i class="material-icons-outlined" style="font-size: 32px;">cloud_upload</i>
-            </div>
-            <h2 class="upload-title">Drag and drop files here</h2>
-            <p class="upload-subtitle">or click the button below to browse from your computer</p>
-            <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
-                Browse Files
-            </button>
+        <!-- Upload Card -->
+        <section class="upload-card" id="dropZone">
             <input type="file" id="fileInput" multiple>
+            <div class="upload-visual">
+                <i class="material-icons">cloud_upload</i>
+            </div>
+            <div class="upload-text">
+                <h3>Select files to share</h3>
+                <p>Drag and drop files here, or click to browse from your computer</p>
+                <button class="btn-google" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+            </div>
         </section>
 
         <!-- Files Section -->
         <section class="files-section">
-            <div class="section-header">
-                <h2 class="section-title">Files in this room</h2>
-                <div class="file-count" id="fileCount">0 files</div>
+            <div class="files-header">
+                <h2>Shared Files</h2>
+                <span class="file-count" id="fileCount">0 files</span>
             </div>
 
             <div class="files-grid" id="filesGrid">
-                <!-- Files will be loaded here dynamically -->
+                <!-- Files will be injected here via files.js -->
                 <div class="empty-state">
-                    <div class="empty-icon">
+                    <div class="empty-visual">
                         <i class="material-icons-outlined">folder_open</i>
                     </div>
-                    <h3 class="empty-title">No files in this room yet</h3>
-                    <p class="empty-subtitle">Upload your first file to get started</p>
+                    <h3 style="font-size: 16px; font-weight: 500; margin-bottom: 4px;">No files shared yet</h3>
+                    <p style="font-size: 14px; color: var(--text-secondary);">Your shared files will appear here for
+                        everyone in the room.</p>
                 </div>
             </div>
         </section>
-    </div>
+    </main>
 
-    <!-- Room Code Modal -->
+    <!-- Footer -->
+    <footer class="footer">
+        Nexis Collaborative Workspace &copy; 2026. All files are encrypted and private.
+    </footer>
+
+    <!-- Room Entry Modal -->
     <div class="modal-overlay" id="roomModal">
-        <div class="modal">
-            <h2 class="modal-title">Enter or Create Room Code</h2>
-            <p class="modal-subtitle">Use a code to join an existing room or create a new one</p>
+        <div class="modal-card">
+            <h2>Join a Room</h2>
+            <p>Enter a room code to access existing shared files or start a new collaborative space.</p>
 
-            <div class="form-group">
-                <label class="form-label" for="roomCodeInput">Room Code</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="roomCodeInput" class="form-input"
-                        placeholder="Enter room code (e.g., ABC-123-XYZ)" maxlength="20" style="flex: 1;">
-                    <button class="btn-generate" onclick="generateRoomCode()">
-                        <i class="material-icons-outlined" style="font-size: 16px; vertical-align: middle;">shuffle</i>
-                        Generate
-                    </button>
-                </div>
+            <div style="position: relative;">
+                <input type="text" id="roomCodeInput" class="input-google" placeholder="Enter Room Code (e.g. ABC-123)"
+                    autocomplete="off">
             </div>
 
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="hideRoomModal()">Cancel</button>
-                <button class="btn-primary" onclick="joinRoom()">Join Room</button>
+            <div style="text-align: right;">
+                <button class="btn-text" onclick="generateRoomCode()" style="font-size: 13px;">
+                    <i class="material-icons-outlined"
+                        style="font-size: 14px; vertical-align: middle;">auto_fix_high</i>
+                    Generate Random Code
+                </button>
+            </div>
+
+            <div class="modal-btns">
+                <!-- If currentRoomCode exists, allow canceling -->
+                <button class="btn-text" onclick="hideRoomModal()" id="cancelBtn">Cancel</button>
+                <button class="btn-action" onclick="joinRoom()">Join Session</button>
             </div>
         </div>
     </div>
 
+    <!-- Script Connections -->
     <script src="./Scripts/files.js"></script>
+    <script>
+        // Check if we should disable cancel button (if no room joined yet)
+        function checkCancelState() {
+            const currentCode = localStorage.getItem('currentRoomCode');
+            const cancelBtn = document.getElementById('cancelBtn');
+            if (!currentCode && cancelBtn) {
+                cancelBtn.style.display = 'none';
+            } else if (cancelBtn) {
+                cancelBtn.style.display = 'block';
+            }
+        }
+
+        // Initial check
+        checkCancelState();
+
+        // Hook into the showRoomModal to check state
+        const originalShowModal = window.showRoomModal;
+        window.showRoomModal = function () {
+            if (originalShowModal) originalShowModal();
+            checkCancelState();
+        };
+
+        // Smooth animations helper for file cards
+        document.body.addEventListener('DOMNodeInserted', function (e) {
+            if (e.target.classList && e.target.classList.contains('file-card')) {
+                e.target.style.opacity = '0';
+                e.target.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    e.target.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                }, 10);
+            }
+        });
+    </script>
 </body>
 
 </html>
