@@ -181,7 +181,6 @@ router.get("/admin/stats", authenticate, isAdmin, async (req, res) => {
     // Calculate total time including current active sessions
     const users = await userModel.find(query).select('totalTimeSpent lastLogin isOnline');
     let totalTimeSeconds = 0;
-    const now = new Date();
 
     users.forEach(u => {
       let time = u.totalTimeSpent || 0;

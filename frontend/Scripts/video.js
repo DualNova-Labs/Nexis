@@ -416,32 +416,30 @@ async function startVideoRoom(roomId) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             let stream;
-            const constraints = {
-                video: cameraSelect.value ? 
-                    { deviceId: { exact: cameraSelect.value } } : true,
-                audio: true
-            };
-                
-            try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-            } catch (err) {
-                console.error('getUserMedia error:', err);
-                
-                // If camera is in use, try audio only first
-                if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                    console.log('Camera in use, trying with basic constraints...');
+            
+            // Check if test mode is selected
+            if (cameraSelect.value === 'test') {
+                console.log('Test mode selected, creating test stream');
+                stream = createTestStream();
+            } else {
+                const constraints = {
+                    video: cameraSelect.value ? 
+                        { deviceId: { exact: cameraSelect.value } } : true,
+                    audio: true
+                };
                     
-                    // Try with basic constraints as fallback
-                    try {
-                        stream = await navigator.mediaDevices.getUserMedia({ 
-                            video: true,
-                            audio: true
-                        });
-                    } catch (fallbackErr) {
-                        throw fallbackErr;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (err) {
+                    console.error('getUserMedia error:', err);
+                    
+                    // If camera is in use, automatically fall back to test mode
+                    if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                        console.log('Camera in use, automatically switching to test mode...');
+                        stream = createTestStream();
+                    } else {
+                        throw err;
                     }
-                } else {
-                    throw err;
                 }
             }
             
