@@ -18,6 +18,8 @@
 
     <!-- AOS for Scroll Animations -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="./Style/toast.css">
+
 
     <style>
         :root {
@@ -694,7 +696,9 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="./Scripts/toast.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
     <script>
         // Initialize Animations
         AOS.init({
@@ -739,7 +743,7 @@
                     window.location.href = `video.html?action=join&room=${roomCode}`;
                 }
             } else {
-                alert('Please enter a room code');
+                toast.info('Please enter a room code');
             }
         });
     </script>

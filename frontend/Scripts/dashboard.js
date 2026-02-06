@@ -6,9 +6,9 @@ if (!userDetails) {
 }
 
 // Get API base URL - works for both local server and direct file access
-const API_BASE = window.location.hostname 
-  ? `http://${window.location.hostname}:3001`
-  : 'http://localhost:3001';
+const API_BASE = window.location.hostname
+    ? `http://${window.location.hostname}:3001`
+    : 'http://localhost:3001';
 
 // Display user email
 document.getElementById('userEmail').textContent = userDetails.email;
@@ -23,7 +23,7 @@ async function validateSession() {
         const data = await res.json();
 
         if (res.status === 401 && data.code === "SESSION_INVALIDATED") {
-            alert(data.msg);
+            toast.error(data.msg);
             localStorage.clear();
             sessionStorage.clear();
             window.location.href = './login.html';

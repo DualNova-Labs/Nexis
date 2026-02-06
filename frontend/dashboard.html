@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexis | Dashboard</title>
     <link rel="icon" type="image/png" href="Images/fav_icon.PNG">
-    
+
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    
+    <link rel="stylesheet" href="./Style/toast.css">
+
+
     <style>
         :root {
             --primary: #1a73e8;
@@ -23,8 +26,8 @@
             --border: #dadce0;
             --radius-lg: 16px;
             --radius-md: 12px;
-            --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
-            --shadow-hover: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+            --shadow-hover: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
         }
 
         * {
@@ -47,7 +50,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -82,7 +85,9 @@
         }
 
         @media(min-width: 768px) {
-            .date-time { display: block; }
+            .date-time {
+                display: block;
+            }
         }
 
         .user-profile {
@@ -314,26 +319,51 @@
         .btn-tool-secondary:hover {
             background: #e8eaed;
         }
-        
+
         /* Icon Colors */
-        .color-video { background: #e8f0fe; color: #1a73e8; }
-        .color-screen { background: #e6f4ea; color: #1e8e3e; }
-        .color-chat { background: #fce8e6; color: #d93025; }
-        .color-ai { background: #f3e8fd; color: #9334e6; }
-        .color-file { background: #feefc3; color: #f29900; }
-        .color-board { background: #fce8e6; color: #ea4335; }
+        .color-video {
+            background: #e8f0fe;
+            color: #1a73e8;
+        }
+
+        .color-screen {
+            background: #e6f4ea;
+            color: #1e8e3e;
+        }
+
+        .color-chat {
+            background: #fce8e6;
+            color: #d93025;
+        }
+
+        .color-ai {
+            background: #f3e8fd;
+            color: #9334e6;
+        }
+
+        .color-file {
+            background: #feefc3;
+            color: #f29900;
+        }
+
+        .color-board {
+            background: #fce8e6;
+            color: #ea4335;
+        }
 
         @media (max-width: 900px) {
             .welcome-section {
                 grid-template-columns: 1fr;
                 gap: 40px;
             }
+
             .hero-img {
-                display: none; 
+                display: none;
             }
         }
     </style>
 </head>
+
 <body>
 
     <nav class="navbar">
@@ -355,19 +385,20 @@
     </nav>
 
     <div class="main-container">
-        
+
         <!-- Welcome Hero -->
         <section class="welcome-section">
             <div class="welcome-text">
                 <h1>Premium video meetings.<br>Now free for everyone.</h1>
-                <p>We re-engineered the service that we built for secure business meetings, Google Meet, to make it free and available for all.</p>
-                
+                <p>We re-engineered the service that we built for secure business meetings, Google Meet, to make it free
+                    and available for all.</p>
+
                 <div class="action-group">
                     <a href="./video.html?action=create" class="btn-large btn-primary">
                         <span class="material-icons-outlined">video_call</span>
                         New meeting
                     </a>
-                    
+
                     <div class="join-form">
                         <span class="material-icons-outlined" style="color: var(--text-gray);">keyboard</span>
                         <input type="text" class="join-input" placeholder="Enter a code or link">
@@ -375,10 +406,11 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="hero-image-wrapper">
-                 <!-- Using the previously generated mockup or a placeholder pattern -->
-                 <img src="https://www.gstatic.com/meet/user_edu_get_a_link_light_90698cd7b4ca04d3005c962a3756c42d.svg" alt="Meeting Illustration" style="width: 100%; max-width: 400px; display: block; margin: 0 auto;">
+                <!-- Using the previously generated mockup or a placeholder pattern -->
+                <img src="https://www.gstatic.com/meet/user_edu_get_a_link_light_90698cd7b4ca04d3005c962a3756c42d.svg"
+                    alt="Meeting Illustration" style="width: 100%; max-width: 400px; display: block; margin: 0 auto;">
             </div>
         </section>
 
@@ -386,7 +418,7 @@
         <section class="tools-section">
             <h2>Your Workspace</h2>
             <div class="tools-grid">
-                
+
                 <!-- Video Call -->
                 <div class="tool-card">
                     <div class="tool-icon-wrapper color-video">
@@ -469,14 +501,16 @@
         </section>
     </div>
 
+    <script src="./Scripts/toast.js"></script>
     <script src="./Scripts/dashboard.js"></script>
+
     <script>
         // Inline script to handle date/time and input active state
-        
+
         // Date Time
         function updateTime() {
             const now = new Date();
-            const options = { hour: 'numeric', minute: 'numeric',   weekday: 'short', month: 'short', day: 'numeric' };
+            const options = { hour: 'numeric', minute: 'numeric', weekday: 'short', month: 'short', day: 'numeric' };
             const timeString = now.toLocaleDateString('en-US', options);
             document.getElementById('dateTimeDisplay').textContent = timeString;
         }
@@ -516,11 +550,12 @@
         const emailEl = document.getElementById('userEmail');
         // Wait for dashboard.js to populate email then update avatar
         setTimeout(() => {
-            if(emailEl.textContent) {
-                 const firstLetter = emailEl.textContent.charAt(0).toUpperCase();
-                 document.getElementById('userAvatar').textContent = firstLetter;
+            if (emailEl.textContent) {
+                const firstLetter = emailEl.textContent.charAt(0).toUpperCase();
+                document.getElementById('userAvatar').textContent = firstLetter;
             }
         }, 500);
     </script>
 </body>
+
 </html>

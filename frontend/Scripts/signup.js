@@ -2,13 +2,13 @@ const signupForm = document.getElementById("signup-form");
 const messageDiv = document.getElementById("message");
 
 function showMessage(message, isError = false) {
-  messageDiv.textContent = message;
-  messageDiv.style.color = isError ? "#ff4444" : "#00C896";
-  messageDiv.style.display = "block";
-  setTimeout(() => {
-    messageDiv.style.display = "none";
-  }, 5000);
+  if (isError) {
+    toast.error(message);
+  } else {
+    toast.success(message);
+  }
 }
+
 
 signupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -60,11 +60,14 @@ signupForm.addEventListener("submit", async (e) => {
       localStorage.setItem("token", data.token);
 
       // Immediate redirection based on role
-      if (data.user_details.role === 'admin') {
-        window.location.href = "./admin-dashboard.html";
-      } else {
-        window.location.href = "./dashboard.html";
-      }
+      setTimeout(() => {
+        if (data.user_details.role === 'admin') {
+          window.location.href = "./admin-dashboard.html";
+        } else {
+          window.location.href = "./dashboard.html";
+        }
+      }, 1500);
+
     }
 
   } catch (error) {

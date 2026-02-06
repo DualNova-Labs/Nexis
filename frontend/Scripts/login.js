@@ -28,26 +28,29 @@ login.addEventListener("submit", (e) => {
       document.getElementById("lemail").value = "";
       document.getElementById("lpass").value = "";
       if (res.ok) {
-        alert("Login Successful");
+        toast.success("Login Successful");
         localStorage.setItem("userDetails", JSON.stringify(res.user_details));
         localStorage.setItem("token", res.token);
 
         // Check if there's a pending room join
         const pendingRoomJoin = localStorage.getItem('pendingRoomJoin');
-        if (pendingRoomJoin) {
-          localStorage.removeItem('pendingRoomJoin');
-          window.location.href = `./video.html?action=join&room=${pendingRoomJoin}`;
-        } else if (res.user_details.role === 'admin') {
-          window.location.href = "./admin-dashboard.html";
-        } else {
-          window.location.href = "./dashboard.html";
-        }
+        setTimeout(() => {
+          if (pendingRoomJoin) {
+            localStorage.removeItem('pendingRoomJoin');
+            window.location.href = `./video.html?action=join&room=${pendingRoomJoin}`;
+          } else if (res.user_details.role === 'admin') {
+            window.location.href = "./admin-dashboard.html";
+          } else {
+            window.location.href = "./dashboard.html";
+          }
+        }, 1500);
+
       } else {
-        alert(`${res.msg}`);
+        toast.error(res.msg || "Login Failed");
       }
     })
     .catch((err) => {
       console.log(err);
-      alert("Something went wrong")
+      toast.error("Something went wrong");
     });
 });
