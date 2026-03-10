@@ -12,14 +12,14 @@
     // --- IMPORTANT FOR PRODUCTION ---
     // Replace the value below with your actual Render backend URL
     // Example: 'https://nexis-backend.onrender.com'
-    const PRODUCTION_BACKEND_URL = 'https://YOUR_RENDER_BACKEND_URL_HERE.onrender.com';
+    const PRODUCTION_BACKEND_URL = 'https://nexis-production-1666.up.railway.app';
 
     if (isLocalhost) {
         window.API_URL = 'http://localhost:3001';
-        window.WS_URL  = 'ws://localhost:3001';
+        window.WS_URL = 'ws://localhost:3001';
     } else {
         window.API_URL = PRODUCTION_BACKEND_URL;
-        window.WS_URL  = PRODUCTION_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+        window.WS_URL = PRODUCTION_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
     }
 
     console.log(`[Nexis Config] Environment: ${isLocalhost ? 'LOCAL' : 'PRODUCTION'}`);
