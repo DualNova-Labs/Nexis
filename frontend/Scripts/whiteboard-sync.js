@@ -10,10 +10,8 @@ const RECONNECT_DELAY = 2000;
 
 // Get WebSocket URL based on current location
 function getWebSocketUrl() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the backend server port (default 3001)
-    const host = window.location.hostname || 'localhost';
-    return `${protocol}//${host}:3001`;
+    // Use global WS_URL set by config.js (supports both local and production)
+    return window.WS_URL || 'ws://localhost:3001';
 }
 
 // Initialize WebSocket connection
@@ -267,7 +265,7 @@ function broadcastClear() {
 // Get user email from localStorage or session
 function getUserEmail() {
     try {
-        const user = JSON.parse(localStorage.getItem('user'));
+        const user = JSON.parse(localStorage.getItem('userDetails') || sessionStorage.getItem('userDetails'));
         return user?.email || 'anonymous';
     } catch {
         return 'anonymous';

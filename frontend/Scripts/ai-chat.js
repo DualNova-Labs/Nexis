@@ -8,7 +8,8 @@ const API_URL = window.API_URL || 'http://localhost:3001';
 const API_CONFIG = {
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
     },
     credentials: 'include'
 };

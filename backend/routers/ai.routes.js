@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { authenticate } = require('../middleware/auth.middleware');
 
 // Initialize Gemini API with validation
 let genAI;
@@ -54,7 +55,7 @@ const chatHistory = new Map();
 const chatMetadata = new Map(); // Store chat metadata (title, timestamp, etc.)
 
 // Initialize a new chat
-router.post('/chat/start', async (req, res) => {
+router.post('/chat/start', authenticate, async (req, res) => {
     try {
         if (!model) {
             throw new Error('Gemini API not properly initialized');
@@ -79,7 +80,7 @@ router.post('/chat/start', async (req, res) => {
 });
 
 // Send message and get response
-router.post('/chat/message', async (req, res) => {
+router.post('/chat/message', authenticate, async (req, res) => {
     try {
         if (!model) {
             return res.status(500).json({
@@ -219,7 +220,7 @@ router.post('/chat/message', async (req, res) => {
 });
 
 // Get chat history
-router.get('/chat/history/:chatId', async (req, res) => {
+router.get('/chat/history/:chatId', authenticate, async (req, res) => {
     try {
         const { chatId } = req.params;
         const history = chatHistory.get(chatId) || [];
@@ -231,7 +232,7 @@ router.get('/chat/history/:chatId', async (req, res) => {
 });
 
 // List all chats
-router.get('/chat/list', async (req, res) => {
+router.get('/chat/list', authenticate, async (req, res) => {
     try {
         const chats = [];
         for (const [chatId, metadata] of chatMetadata.entries()) {
@@ -250,7 +251,7 @@ router.get('/chat/list', async (req, res) => {
 });
 
 // Delete a chat
-router.delete('/chat/:chatId', async (req, res) => {
+router.delete('/chat/:chatId', authenticate, async (req, res) => {
     try {
         const { chatId } = req.params;
         chatHistory.delete(chatId);

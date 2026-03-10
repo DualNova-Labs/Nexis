@@ -39,7 +39,10 @@ const configuration = {
             username: 'e8dd65b92aad9a38fbaab7e4',
             credential: 'XhvkOYxj2ckQNNpE'
         }
-    ]
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
 };
 
 let screenStream = null;
@@ -50,7 +53,13 @@ let isInitiator = false;
 let pendingIceCandidates = []; // Queue for ICE candidates that arrive before peer connection is ready
 
 // Get user details from localStorage
-const userDetails = JSON.parse(localStorage.getItem('userDetails'));
+let userDetails = null;
+try {
+    userDetails = JSON.parse(localStorage.getItem('userDetails')) || JSON.parse(sessionStorage.getItem('userDetails'));
+} catch (e) {
+    userDetails = null;
+}
+
 if (!userDetails || !userDetails.email) {
     window.location.href = './login.html';
 }
@@ -58,8 +67,10 @@ if (!userDetails || !userDetails.email) {
 // Session validation: Only allow one active login
 async function validateSession() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+
     try {
-        const res = await fetch(`${API_URL}/user/admin/users`, { // Using a protected route for verification
+        const res = await fetch(`${API_URL}/user/admin/users`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -79,10 +90,21 @@ setInterval(validateSession, 30000); // Check every 30 seconds
 
 // Initialize WebSocket connection
 function initializeWebSocket() {
+    if (ws) {
+        ws.close();
+    }
+
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
         console.log('WebSocket connected');
+        if (currentRoomId) {
+            sendMessage({
+                type: 'join',
+                room: currentRoomId,
+                email: userDetails.email
+            });
+        }
     };
 
     ws.onmessage = async (event) => {
@@ -94,6 +116,11 @@ function initializeWebSocket() {
                 case 'user-joined':
                     console.log('User joined:', message.email);
                     isInitiator = true;
+                    // If we are already sharing, send offer to the new user
+                    if (screenStream) {
+                        console.log('Already sharing, initiating negotiation...');
+                        await createAndSendOffer();
+                    }
                     break;
                 case 'offer':
                     console.log('Received offer');
@@ -108,12 +135,17 @@ function initializeWebSocket() {
                     await handleIceCandidate(message.candidate);
                     break;
                 case 'user-left':
+                    console.log('User left:', message.email);
                     handleUserLeft();
                     break;
             }
         } catch (error) {
             console.error('Error handling message:', error);
         }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected');
     };
 
     ws.onerror = (error) => {
@@ -124,7 +156,12 @@ function initializeWebSocket() {
 // Initialize peer connection
 async function createPeerConnection() {
     try {
+        if (peerConnection) {
+            peerConnection.close();
+        }
+
         peerConnection = new RTCPeerConnection(configuration);
+        console.log('Created new peer connection');
 
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
@@ -147,6 +184,14 @@ async function createPeerConnection() {
 
         peerConnection.oniceconnectionstatechange = () => {
             console.log('ICE connection state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'failed') {
+                console.log('ICE connection failed, restarting...');
+                peerConnection.restartIce();
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            console.log('Connection state:', peerConnection.connectionState);
         };
 
         // Add screen stream if available
@@ -157,10 +202,37 @@ async function createPeerConnection() {
             });
         }
 
+        // Process any queued ICE candidates
+        await processPendingIceCandidates();
+
         return peerConnection;
     } catch (error) {
         console.error('Error creating peer connection:', error);
         throw error;
+    }
+}
+
+// Create and send offer
+async function createAndSendOffer() {
+    try {
+        if (!peerConnection) {
+            await createPeerConnection();
+        }
+
+        console.log('Creating and sending offer');
+        const offer = await peerConnection.createOffer({
+            offerToReceiveVideo: true,
+            offerToReceiveAudio: true
+        });
+
+        await peerConnection.setLocalDescription(offer);
+        sendMessage({
+            type: 'offer',
+            offer: offer,
+            room: currentRoomId
+        });
+    } catch (error) {
+        console.error('Error creating offer:', error);
     }
 }
 
@@ -231,7 +303,7 @@ async function processPendingIceCandidates() {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                 console.log('Added queued ICE candidate');
             } catch (error) {
-                console.error('Error adding queued ICE candidate:', error);
+                console.warn('Error adding queued ICE candidate:', error);
             }
         }
         pendingIceCandidates = [];
@@ -242,8 +314,11 @@ async function processPendingIceCandidates() {
 function handleUserLeft() {
     console.log('Remote user left');
     if (screenVideo.srcObject) {
-        screenVideo.srcObject.getTracks().forEach(track => track.stop());
-        screenVideo.srcObject = null;
+        // Clear remote stream if it's not our local stream
+        // In simple 1-to-1, we can just check if screenStream is different
+        if (screenVideo.srcObject !== screenStream) {
+            screenVideo.srcObject = null;
+        }
     }
 }
 
@@ -325,21 +400,13 @@ startShareBtn.addEventListener('click', async () => {
         screenVideo.srcObject = screenStream;
 
         // Add tracks to peer connection
+        console.log('Adding tracks to peer connection');
         screenStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, screenStream);
         });
 
-        if (isInitiator) {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            console.log('Created and set local description (offer)');
-
-            sendMessage({
-                type: 'offer',
-                offer: offer,
-                room: currentRoomId
-            });
-        }
+        // Always trigger negotiation when we start sharing
+        await createAndSendOffer();
 
         // Listen for when user stops sharing through browser controls
         screenStream.getVideoTracks()[0].addEventListener('ended', () => {
@@ -395,4 +462,4 @@ if (action === 'create') {
 }
 
 // Initialize WebSocket connection
-initializeWebSocket(); 
+initializeWebSocket();
