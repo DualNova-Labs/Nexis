@@ -73,6 +73,7 @@ router.post("/sign", async (req, res) => {
       }
     });
   } catch (err) {
+    console.error('SIGNUP ERROR:', err);
     res.status(500).json({ ok: false, msg: "Registration failed" });
   }
 });
@@ -127,6 +128,7 @@ router.post("/login", async (req, res) => {
       token
     });
   } catch (err) {
+    console.error('LOGIN ERROR:', err);
     res.status(500).json({ ok: false, msg: "Login failed" });
   }
 });
