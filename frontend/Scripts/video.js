@@ -1,7 +1,6 @@
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
-const WS_URL = `ws://${hostname}:3001`;
+// API_URL and WS_URL are set globally by Scripts/config.js
+const API_URL = window.API_URL || 'http://localhost:3001';
+const WS_URL = window.WS_URL || 'ws://localhost:3001';
 
 // Get DOM elements
 const roomSelection = document.getElementById('roomSelection');
@@ -80,7 +79,7 @@ try {
     userDetails = null;
 }
 
-(function() {
+(function () {
     if (!userDetails || !userDetails.email) {
         // If not in sessionStorage, try localStorage and copy to sessionStorage
         let localUserDetails = null;
@@ -119,7 +118,7 @@ function initializeWebSocket() {
     }
 
     ws = new WebSocket(WS_URL);
-    
+
     ws.onopen = () => {
         console.log('WebSocket connected');
         reconnectAttempts = 0;
@@ -131,7 +130,7 @@ function initializeWebSocket() {
             });
         }
     };
-    
+
     ws.onclose = () => {
         console.log('WebSocket disconnected');
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -142,12 +141,12 @@ function initializeWebSocket() {
             }, 5000 * reconnectAttempts);
         }
     };
-    
+
     ws.onmessage = async (event) => {
         try {
             const message = JSON.parse(event.data);
             console.log('📨 Received message:', message.type, message);
-            
+
             switch (message.type) {
                 case 'user-joined':
                     console.log('👤 User joined:', message.email, '| I am initiator now');
@@ -202,7 +201,7 @@ async function createPeerConnection() {
 
         peerConnection = new RTCPeerConnection(configuration);
         console.log('Created new peer connection');
-        
+
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 console.log('Generated ICE candidate');
@@ -213,7 +212,7 @@ async function createPeerConnection() {
                 });
             }
         };
-        
+
         peerConnection.ontrack = (event) => {
             console.log('Received remote track:', event.streams[0]);
             if (remoteVideo.srcObject !== event.streams[0]) {
@@ -248,10 +247,10 @@ async function createPeerConnection() {
                 console.log('Added track:', track.kind);
             });
         }
-        
+
         // Process queued ICE candidates
         await processPendingIceCandidates();
-        
+
         return peerConnection;
     } catch (error) {
         console.error('Error creating peer connection:', error);
@@ -266,26 +265,26 @@ async function handleOffer(offer) {
         if (!peerConnection) {
             await createPeerConnection();
         }
-        
+
         if (peerConnection.signalingState !== 'stable') {
             console.log('Signaling state not stable, rolling back');
             await Promise.all([
-                peerConnection.setLocalDescription({type: "rollback"}),
+                peerConnection.setLocalDescription({ type: "rollback" }),
                 peerConnection.setRemoteDescription(offer)
             ]);
         } else {
             await peerConnection.setRemoteDescription(offer);
         }
-        
+
         console.log('Set remote description from offer');
-        
+
         // Process any queued ICE candidates now that we have remote description
         await processPendingIceCandidates();
-        
+
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         console.log('Created and set local description (answer)');
-        
+
         sendMessage({
             type: 'answer',
             answer: answer,
@@ -302,7 +301,7 @@ async function handleAnswer(answer) {
         if (peerConnection) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
             console.log('Set remote description from answer');
-            
+
             // Process any queued ICE candidates now that we have remote description
             await processPendingIceCandidates();
         }
@@ -372,7 +371,7 @@ async function enterRoom() {
     currentRoomId = roomId;
     isInitiator = true;
     await startVideoRoom(roomId);
-    
+
     sendMessage({
         type: 'join',
         room: roomId,
@@ -390,7 +389,7 @@ async function joinExistingRoom() {
     currentRoomId = roomId;
     isInitiator = false;
     await startVideoRoom(roomId);
-    
+
     sendMessage({
         type: 'join',
         room: roomId,
@@ -404,7 +403,7 @@ async function startVideoRoom(roomId) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             initializeWebSocket();
         }
-        
+
         try {
             // First try to release any existing streams
             if (localStream) {
@@ -414,25 +413,25 @@ async function startVideoRoom(roomId) {
 
             // Wait a moment for devices to be released
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             let stream;
-            
+
             // Check if test mode is selected
             if (cameraSelect.value === 'test') {
                 console.log('Test mode selected, creating test stream');
                 stream = createTestStream();
             } else {
                 const constraints = {
-                    video: cameraSelect.value ? 
+                    video: cameraSelect.value ?
                         { deviceId: { exact: cameraSelect.value } } : true,
                     audio: true
                 };
-                    
+
                 try {
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                 } catch (err) {
                     console.error('getUserMedia error:', err);
-                    
+
                     // If camera is in use, automatically fall back to test mode
                     if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
                         console.log('Camera in use, automatically switching to test mode...');
@@ -442,21 +441,21 @@ async function startVideoRoom(roomId) {
                     }
                 }
             }
-            
+
             if (stream) {
                 localStream = stream;
                 localVideo.srcObject = stream;
-                
+
                 roomSelection.style.display = 'none';
                 videoRoom.style.display = 'block';
                 roomIdSpan.textContent = roomId;
-                
+
                 await createPeerConnection();
-                
+
                 // Don't send offer here - wait for signaling
                 // The initiator will send offer when they see 'user-joined'
                 // The joiner will receive offer and respond with answer
-                
+
                 startCallBtn.disabled = false;
                 endCallBtn.disabled = false;
                 toggleMuteBtn.disabled = false;
@@ -482,7 +481,7 @@ startCallBtn.addEventListener('click', async () => {
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             console.log('Created and set local description (offer)');
-            
+
             sendMessage({
                 type: 'offer',
                 offer: offer,
@@ -501,17 +500,17 @@ endCallBtn.addEventListener('click', () => {
         localVideo.srcObject = null;
         localStream = null;
     }
-    
+
     if (peerConnection) {
         peerConnection.close();
         peerConnection = null;
     }
-    
+
     if (remoteVideo.srcObject) {
         remoteVideo.srcObject.getTracks().forEach(track => track.stop());
         remoteVideo.srcObject = null;
     }
-    
+
     sendMessage({
         type: 'leave',
         room: currentRoomId,
@@ -563,12 +562,12 @@ toggleVideoBtn.addEventListener('click', () => {
 // Only run initialization if authenticated
 if (isAuthenticated) {
     console.log('✅ User authenticated, initializing video page...');
-    
+
     // Check URL parameters for action
     const urlParams = new URLSearchParams(window.location.search);
     const action = urlParams.get('action');
     const roomParam = urlParams.get('room');
-    
+
     console.log('📋 URL action:', action, '| room:', roomParam);
     console.log('📦 DOM elements - createRoomDiv:', createRoomDiv, '| joinRoomDiv:', joinRoomDiv);
 
@@ -585,7 +584,7 @@ if (isAuthenticated) {
         createRoomDiv.style.display = 'none';
         joinRoomDiv.style.display = 'block';
         console.log('✅ Join room div displayed');
-        
+
         // If room code is provided in URL, pre-fill it
         if (roomParam) {
             roomIdInput.value = roomParam;
@@ -601,7 +600,7 @@ if (isAuthenticated) {
 
     // Initialize WebSocket connection
     initializeWebSocket();
-    
+
     // Load available cameras
     loadCameras();
 } else {
@@ -625,7 +624,7 @@ async function createAndSendOffer() {
         offer.sdp = updateBandwidthRestriction(offer.sdp, maxBitrate);
 
         await peerConnection.setLocalDescription(offer);
-        
+
         sendMessage({
             type: 'offer',
             offer: offer,
@@ -644,14 +643,14 @@ function updateBandwidthRestriction(sdp, bandwidth) {
         bandwidth = (bandwidth >>> 0) * 1000;
         modifier = 'TIAS';
     }
-    
+
     if (sdp.indexOf('b=' + modifier + ':') === -1) {
         // Insert b= after c= line
         sdp = sdp.replace(/c=IN (.*)\r\n/, 'c=IN $1\r\nb=' + modifier + ':' + bandwidth + '\r\n');
     } else {
         sdp = sdp.replace(new RegExp('b=' + modifier + ':.*\r\n'), 'b=' + modifier + ':' + bandwidth + '\r\n');
     }
-    
+
     return sdp;
 }
 
@@ -672,7 +671,7 @@ function getBitrateForQuality(quality) {
 // Change video quality
 async function changeVideoQuality(quality) {
     if (quality === currentQuality) return;
-    
+
     currentQuality = quality;
     const constraints = {
         video: {
@@ -681,22 +680,22 @@ async function changeVideoQuality(quality) {
         },
         audio: true
     };
-    
+
     try {
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
+
         // Replace tracks in peer connection
         const videoTrack = newStream.getVideoTracks()[0];
         const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
         if (sender) {
             await sender.replaceTrack(videoTrack);
         }
-        
+
         // Update local video
         localStream.getVideoTracks().forEach(track => track.stop());
         localStream = newStream;
         localVideo.srcObject = newStream;
-        
+
         // Renegotiate with new bitrate
         await createAndSendOffer();
     } catch (error) {
@@ -719,7 +718,7 @@ function handleError(error) {
 function handleMediaError(error) {
     console.error('Media error:', error);
     let message = 'Failed to access camera/microphone. ';
-    
+
     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         message += 'Please allow camera and microphone access in your browser settings.';
     } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
@@ -729,9 +728,9 @@ function handleMediaError(error) {
     } else {
         message += error.message || 'Unknown error occurred.';
     }
-    
+
     alert(message);
-    
+
     // Return to room selection
     roomSelection.style.display = 'block';
     videoRoom.style.display = 'none';
@@ -742,7 +741,7 @@ async function loadCameras() {
     try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
+
         cameraSelect.innerHTML = '';
         videoDevices.forEach(device => {
             const option = document.createElement('option');
@@ -767,45 +766,45 @@ function createTestStream() {
     canvas.width = 640;
     canvas.height = 480;
     const ctx = canvas.getContext('2d');
-    
+
     // Create animated test pattern
     setInterval(() => {
         // Clear canvas
         ctx.fillStyle = '#1a1a2e';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         // Draw test pattern
         ctx.fillStyle = '#00ff88';
         ctx.font = '20px Arial';
         ctx.fillText(`Test Stream - Room: ${currentRoomId}`, 20, 40);
         ctx.fillText(`Time: ${new Date().toLocaleTimeString()}`, 20, 70);
-        
+
         // Draw moving element
         const time = Date.now() / 1000;
-        const x = canvas.width/2 + Math.cos(time) * 100;
-        const y = canvas.height/2 + Math.sin(time) * 100;
+        const x = canvas.width / 2 + Math.cos(time) * 100;
+        const y = canvas.height / 2 + Math.sin(time) * 100;
         ctx.beginPath();
         ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
-    }, 1000/30); // 30 FPS
-    
+    }, 1000 / 30); // 30 FPS
+
     return canvas.captureStream(30);
 }
 
 // Add event listeners for camera selection and test mode
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing event listeners ...
-    
+
     // Load available cameras
     loadCameras();
-    
+
     // Handle camera change
     cameraSelect.addEventListener('change', async () => {
         if (localStream && peerConnection) {
             await startVideoRoom(currentRoomId);
         }
     });
-    
+
     // Request camera permissions to get labels
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {

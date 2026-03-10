@@ -2,9 +2,9 @@ let chatId = null;
 let isProcessing = false;
 let currentChatId = null; // Track current chat being viewed
 
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
+// API_URL is set globally by Scripts/config.js (loaded before this script)
+// Uses https:// in production, http:// on localhost automatically
+const API_URL = window.API_URL || 'http://localhost:3001';
 const API_CONFIG = {
     headers: {
         'Content-Type': 'application/json',

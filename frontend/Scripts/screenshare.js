@@ -1,7 +1,6 @@
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
-const WS_URL = `ws://${hostname}:3001`;
+// API_URL and WS_URL are set globally by Scripts/config.js
+const API_URL = window.API_URL || 'http://localhost:3001';
+const WS_URL = window.WS_URL || 'ws://localhost:3001';
 
 const roomSelection = document.getElementById('roomSelection');
 const createRoomDiv = document.getElementById('createRoom');
@@ -174,7 +173,7 @@ async function handleOffer(offer) {
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
         console.log('Set remote description from offer');
-        
+
         // Process any queued ICE candidates now that we have remote description
         await processPendingIceCandidates();
 
@@ -198,7 +197,7 @@ async function handleAnswer(answer) {
         if (peerConnection) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
             console.log('Set remote description from answer');
-            
+
             // Process any queued ICE candidates now that we have remote description
             await processPendingIceCandidates();
         }
