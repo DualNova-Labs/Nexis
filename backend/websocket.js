@@ -49,10 +49,13 @@ function setupWebSocket(server) {
         ws.on('message', async (data) => {
             try {
                 const message = JSON.parse(data);
-                console.log('Received WebSocket message:', message.type, 'for room:', message.room);
+                console.log(`Received ${message.type} message from ${message.email || 'unknown'} for room ${message.room}`);
                 
-                // Reset reconnect attempts on successful message
-                reconnectAttempts = 0;
+                // Get client info if exists
+                const clientInfo = clients.get(ws);
+                if (clientInfo) {
+                    clientInfo.reconnectAttempts = 0;
+                }
                 
                 switch (message.type) {
                     case 'join':
@@ -340,7 +343,7 @@ function setupWebSocket(server) {
         console.log(`User joining whiteboard room ${room}`);
         
         // Store client info for whiteboard
-        clients.set(ws, { room, email: message.email || 'anonymous' });
+        clients.set(ws, { room, email: message.email || 'anonymous', reconnectAttempts: 0 });
         
         // Add to room
         if (!rooms.has(room)) {

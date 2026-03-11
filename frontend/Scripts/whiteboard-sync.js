@@ -159,11 +159,19 @@ function handleRemoteDraw(drawData) {
         ctx.globalCompositeOperation = 'source-over';
     }
 
+    // Denormalize coordinates based on local canvas size
+    const fromX = drawData.fromX * canvas.width;
+    const fromY = drawData.fromY * canvas.height;
+    const toX = drawData.toX * canvas.width;
+    const toY = drawData.toY * canvas.height;
+    const startX = (drawData.startX || 0) * canvas.width;
+    const startY = (drawData.startY || 0) * canvas.height;
+
     switch (drawData.tool) {
         case 'pen':
             ctx.beginPath();
-            ctx.moveTo(drawData.fromX, drawData.fromY);
-            ctx.lineTo(drawData.toX, drawData.toY);
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
             ctx.stroke();
             break;
         case 'line':
@@ -171,10 +179,10 @@ function handleRemoteDraw(drawData) {
                 const img = new Image();
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     ctx.beginPath();
-                    ctx.moveTo(drawData.startX, drawData.startY);
-                    ctx.lineTo(drawData.toX, drawData.toY);
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(toX, toY);
                     ctx.stroke();
                 };
                 img.src = drawData.savedState;
@@ -185,9 +193,11 @@ function handleRemoteDraw(drawData) {
                 const img = new Image();
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const width = (drawData.width || 0) * canvas.width;
+                    const height = (drawData.height || 0) * canvas.height;
                     ctx.beginPath();
-                    ctx.strokeRect(drawData.startX, drawData.startY, drawData.width, drawData.height);
+                    ctx.strokeRect(startX, startY, width, height);
                 };
                 img.src = drawData.savedState;
             }
@@ -197,9 +207,10 @@ function handleRemoteDraw(drawData) {
                 const img = new Image();
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const radius = (drawData.radius || 0) * Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2)) / Math.sqrt(2);
                     ctx.beginPath();
-                    ctx.arc(drawData.startX, drawData.startY, drawData.radius, 0, Math.PI * 2);
+                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
                     ctx.stroke();
                 };
                 img.src = drawData.savedState;
@@ -221,7 +232,8 @@ function handleRemoteState(state) {
     const img = new Image();
     img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        // Scale to fit local canvas
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         console.log('Canvas state applied successfully');
     };
     img.onerror = () => {

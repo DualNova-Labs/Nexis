@@ -127,10 +127,10 @@ function draw(e) {
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
                     tool: 'pen',
-                    fromX: lastX,
-                    fromY: lastY,
-                    toX: x,
-                    toY: y,
+                    fromX: lastX / canvas.width,
+                    fromY: lastY / canvas.height,
+                    toX: x / canvas.width,
+                    toY: y / canvas.height,
                     color: currentColor,
                     lineWidth: STROKE_WIDTH,
                     isEraser: isEraser

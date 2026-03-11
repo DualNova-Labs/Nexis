@@ -223,10 +223,10 @@ function onHandResults(results) {
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
                     tool: 'pen',
-                    fromX: lastHandPosition.x,
-                    fromY: lastHandPosition.y,
-                    toX: smoothedX,
-                    toY: smoothedY,
+                    fromX: lastHandPosition.x / mainCanvas.width,
+                    fromY: lastHandPosition.y / mainCanvas.height,
+                    toX: smoothedX / mainCanvas.width,
+                    toY: smoothedY / mainCanvas.height,
                     color: window.currentColor || '#202124',
                     lineWidth: 3,
                     isEraser: false
