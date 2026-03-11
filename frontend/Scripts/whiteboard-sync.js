@@ -69,17 +69,19 @@ function initWhiteboardSync(roomId) {
 function attemptReconnect() {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         console.log('Max reconnect attempts reached');
+        showNotification('Collaboration connection lost. Please refresh.', 'error');
         return;
     }
 
     reconnectAttempts++;
-    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+    const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${timeout}ms...`);
 
     setTimeout(() => {
         if (currentRoom) {
             initWhiteboardSync(currentRoom);
         }
-    }, RECONNECT_DELAY);
+    }, timeout);
 }
 
 // Send message through WebSocket
@@ -109,16 +111,32 @@ function handleIncomingMessage(message) {
             handleStateRequest();
             break;
         case 'user-joined':
-            console.log(`User ${message.email} joined the whiteboard`);
-            // Send current canvas state to new user
-            sendCanvasState();
+            if (message.email !== getUserEmail()) {
+                console.log(`User ${message.email} joined the whiteboard`);
+                showNotification(`${message.email.split('@')[0]} joined the whiteboard`, 'info');
+                // Send current canvas state to new user
+                sendCanvasState();
+            }
             break;
         case 'user-left':
             console.log(`User ${message.email} left the whiteboard`);
+            showNotification(`${message.email.split('@')[0]} left the whiteboard`, 'info');
             break;
         case 'error':
             console.error('Server error:', message.message);
+            showNotification(message.message, 'error');
             break;
+    }
+}
+
+// Notification helper
+function showNotification(message, type = 'info') {
+    if (window.toast) {
+        if (type === 'success') window.toast.success(message);
+        else if (type === 'error') window.toast.error(message);
+        else window.toast.info(message);
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
     }
 }
 

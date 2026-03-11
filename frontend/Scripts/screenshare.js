@@ -79,7 +79,7 @@ async function validateSession() {
         const data = await res.json();
 
         if (res.status === 401 && data.code === "SESSION_INVALIDATED") {
-            alert(data.msg);
+            handleError({ message: data.msg || 'Session invalidated. Please log in again.' });
             stopSharing(); // Proper cleanup
         }
     } catch (err) {
@@ -549,9 +549,11 @@ function handleError(error) {
 const urlParams = new URLSearchParams(window.location.search);
 const action = urlParams.get('action');
 
-// Initialize room based on action
 if (action === 'create') {
-    const newRoomId = Math.random().toString(36).substring(7);
+    // Use a stronger, readable room ID (e.g. "X4KP-2MNQ")
+    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newRoomId = `${part1}-${part2}`;
     newRoomIdSpan.textContent = newRoomId;
     createRoomDiv.style.display = 'block';
     joinRoomDiv.style.display = 'none';
@@ -562,5 +564,4 @@ if (action === 'create') {
     window.location.href = './dashboard.html';
 }
 
-// Initialize WebSocket connection
-initializeWebSocket();
+// Do NOT init WebSocket here — startScreenRoom() handles it when user enters a room
