@@ -16,14 +16,27 @@ function getWebSocketUrl() {
 
 // Initialize WebSocket connection
 function initWhiteboardSync(roomId) {
-    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-        console.log('WebSocket already connected');
-        return;
+    // Always update the target room first
+    currentRoom = roomId;
+
+    if (wsConnection) {
+        if (wsConnection.readyState === WebSocket.OPEN) {
+            // Already open — just send the join for the new room immediately
+            console.log('WebSocket already open, sending whiteboard-join for room:', roomId);
+            sendMessage({ type: 'whiteboard-join', room: currentRoom, email: getUserEmail() });
+            return;
+        } else if (wsConnection.readyState === WebSocket.CONNECTING) {
+            // Let the existing onopen handler fire and send join (currentRoom is already updated above)
+            console.log('WebSocket still connecting, join will be sent on open');
+            return;
+        } else {
+            // CLOSING or CLOSED — tear down and reconnect
+            wsConnection = null;
+        }
     }
 
-    currentRoom = roomId;
     const wsUrl = getWebSocketUrl();
-    console.log(`Connecting to WebSocket at ${wsUrl} for room ${roomId}`);
+    console.log(`Opening new WebSocket to ${wsUrl} for room ${roomId}`);
 
     try {
         wsConnection = new WebSocket(wsUrl);

@@ -150,20 +150,8 @@ function draw(e) {
             ctx.moveTo(startX, startY);
             ctx.lineTo(x, y);
             ctx.stroke();
-            // FIX: Broadcast live line preview with normalized coords
-            if (typeof broadcastDraw === 'function') {
-                broadcastDraw({
-                    tool: 'line',
-                    startX: startX / canvas.width,
-                    startY: startY / canvas.height,
-                    toX: x / canvas.width,
-                    toY: y / canvas.height,
-                    savedState: canvas.toDataURL(),
-                    color: currentColor,
-                    lineWidth: STROKE_WIDTH,
-                    isEraser: false
-                });
-            }
+            // Shapes sync on mouseup via sendCanvasState() — NOT live per frame
+            // (sending canvas.toDataURL() every mousemove floods WebSocket with ~200KB/frame)
             break;
 
         case 'rectangle': {
@@ -172,20 +160,6 @@ function draw(e) {
             const height = y - startY;
             ctx.beginPath();
             ctx.strokeRect(startX, startY, width, height);
-            // FIX: Broadcast live rect preview with normalized coords
-            if (typeof broadcastDraw === 'function') {
-                broadcastDraw({
-                    tool: 'rectangle',
-                    startX: startX / canvas.width,
-                    startY: startY / canvas.height,
-                    width: width / canvas.width,
-                    height: height / canvas.height,
-                    savedState: canvas.toDataURL(),
-                    color: currentColor,
-                    lineWidth: STROKE_WIDTH,
-                    isEraser: false
-                });
-            }
             break;
         }
 
@@ -198,20 +172,6 @@ function draw(e) {
             ctx.beginPath();
             ctx.arc(startX, startY, radius, 0, Math.PI * 2);
             ctx.stroke();
-            // FIX: Broadcast live circle preview with normalized radius
-            if (typeof broadcastDraw === 'function') {
-                const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
-                broadcastDraw({
-                    tool: 'circle',
-                    startX: startX / canvas.width,
-                    startY: startY / canvas.height,
-                    radius: radius / diagLen,
-                    savedState: canvas.toDataURL(),
-                    color: currentColor,
-                    lineWidth: STROKE_WIDTH,
-                    isEraser: false
-                });
-            }
             break;
         }
     }
