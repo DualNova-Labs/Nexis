@@ -1,50 +1,110 @@
 // Whiteboard Sync Module - Real-time collaboration via WebSocket
-// This module handles syncing canvas state between users in the same room
+// Handles syncing canvas state between users in the same room
 
 let wsConnection = null;
 let currentRoom = null;
 let isConnected = false;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY = 2000;
+let keepAliveTimer = null;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const KEEPALIVE_INTERVAL = 20000; // 20s — under Railway/Caddy's ~30s idle timeout
 
-// Get WebSocket URL based on current location
+// ──────────────────────────────────────────────────────────────
+// Connection Status Indicator (visible in UI)
+// ──────────────────────────────────────────────────────────────
+function setConnectionStatus(state) {
+    // state: 'connected' | 'connecting' | 'disconnected'
+    let indicator = document.getElementById('wb-conn-status');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'wb-conn-status';
+        indicator.style.cssText = [
+            'position:fixed', 'bottom:16px', 'right:16px', 'z-index:9999',
+            'display:flex', 'align-items:center', 'gap:6px',
+            'padding:6px 12px', 'border-radius:20px',
+            'font-size:12px', 'font-weight:600',
+            'background:rgba(0,0,0,0.75)', 'color:#fff',
+            'pointer-events:none', 'user-select:none',
+            'transition:opacity 0.3s'
+        ].join(';');
+        document.body.appendChild(indicator);
+    }
+    const dot = '<span style="width:8px;height:8px;border-radius:50%;display:inline-block;background:';
+    if (state === 'connected') {
+        indicator.innerHTML = dot + '#34a853"></span> Sync: Live';
+        indicator.style.opacity = '1';
+    } else if (state === 'connecting') {
+        indicator.innerHTML = dot + '#fbbc04"></span> Sync: Connecting…';
+        indicator.style.opacity = '1';
+    } else {
+        indicator.innerHTML = dot + '#ea4335"></span> Sync: Disconnected';
+        indicator.style.opacity = '1';
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Keep-alive: send lightweight ping every 20 s
+// Prevents Railway's Caddy proxy from closing idle WS connections
+// ──────────────────────────────────────────────────────────────
+function startKeepAlive() {
+    stopKeepAlive();
+    keepAliveTimer = setInterval(() => {
+        if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+            // Send a lightweight ping the server ignores gracefully
+            wsConnection.send(JSON.stringify({ type: 'whiteboard-ping', room: currentRoom }));
+        }
+    }, KEEPALIVE_INTERVAL);
+}
+
+function stopKeepAlive() {
+    if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+// WebSocket URL
+// ──────────────────────────────────────────────────────────────
 function getWebSocketUrl() {
-    // Use global WS_URL set by config.js (supports both local and production)
     return window.WS_URL || 'ws://localhost:3001';
 }
 
-// Initialize WebSocket connection
+// ──────────────────────────────────────────────────────────────
+// Initialize / Re-initialize WebSocket
+// Always tears down any old connection and creates a fresh one.
+// This avoids silent "already open but not joined" edge cases.
+// ──────────────────────────────────────────────────────────────
 function initWhiteboardSync(roomId) {
-    // Always update the target room first
     currentRoom = roomId;
 
+    // Tear down any existing connection cleanly
     if (wsConnection) {
-        if (wsConnection.readyState === WebSocket.OPEN) {
-            // Already open — just send the join for the new room immediately
-            console.log('WebSocket already open, sending whiteboard-join for room:', roomId);
-            sendMessage({ type: 'whiteboard-join', room: currentRoom, email: getUserEmail() });
-            return;
-        } else if (wsConnection.readyState === WebSocket.CONNECTING) {
-            // Let the existing onopen handler fire and send join (currentRoom is already updated above)
-            console.log('WebSocket still connecting, join will be sent on open');
-            return;
-        } else {
-            // CLOSING or CLOSED — tear down and reconnect
-            wsConnection = null;
+        wsConnection.onclose = null; // prevent triggering reconnect loop
+        wsConnection.onerror = null;
+        wsConnection.onmessage = null;
+        wsConnection.onopen = null;
+        if (wsConnection.readyState !== WebSocket.CLOSED) {
+            wsConnection.close();
         }
+        wsConnection = null;
     }
 
+    stopKeepAlive();
+
     const wsUrl = getWebSocketUrl();
-    console.log(`Opening new WebSocket to ${wsUrl} for room ${roomId}`);
+    console.log(`[WB-Sync] Connecting to ${wsUrl} for room "${roomId}"`);
+    setConnectionStatus('connecting');
 
     try {
         wsConnection = new WebSocket(wsUrl);
 
         wsConnection.onopen = () => {
-            console.log('WebSocket connected');
+            console.log('[WB-Sync] Connected ✓');
             isConnected = true;
             reconnectAttempts = 0;
+            setConnectionStatus('connected');
+            startKeepAlive();
 
             // Join the whiteboard room
             sendMessage({
@@ -52,6 +112,14 @@ function initWhiteboardSync(roomId) {
                 room: currentRoom,
                 email: getUserEmail()
             });
+
+            // Request current state from peers (handles late-join case)
+            setTimeout(() => {
+                sendMessage({
+                    type: 'whiteboard-request-state',
+                    room: currentRoom
+                });
+            }, 500);
         };
 
         wsConnection.onmessage = (event) => {
@@ -59,36 +127,42 @@ function initWhiteboardSync(roomId) {
                 const message = JSON.parse(event.data);
                 handleIncomingMessage(message);
             } catch (error) {
-                console.error('Error parsing WebSocket message:', error);
+                console.error('[WB-Sync] Error parsing message:', error);
             }
         };
 
-        wsConnection.onclose = () => {
-            console.log('WebSocket disconnected');
+        wsConnection.onclose = (evt) => {
+            console.warn(`[WB-Sync] Disconnected (code=${evt.code})`);
             isConnected = false;
+            setConnectionStatus('disconnected');
+            stopKeepAlive();
             attemptReconnect();
         };
 
         wsConnection.onerror = (error) => {
-            console.error('WebSocket error:', error);
+            console.error('[WB-Sync] WebSocket error:', error);
+            setConnectionStatus('disconnected');
         };
 
     } catch (error) {
-        console.error('Failed to create WebSocket connection:', error);
+        console.error('[WB-Sync] Failed to create WebSocket:', error);
+        setConnectionStatus('disconnected');
     }
 }
 
-// Attempt to reconnect
+// ──────────────────────────────────────────────────────────────
+// Reconnect with exponential backoff
+// ──────────────────────────────────────────────────────────────
 function attemptReconnect() {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log('Max reconnect attempts reached');
-        showNotification('Collaboration connection lost. Please refresh.', 'error');
+        console.log('[WB-Sync] Max reconnect attempts reached');
+        showNotification('Sync connection lost. Please refresh the page.', 'error');
         return;
     }
 
     reconnectAttempts++;
-    const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${timeout}ms...`);
+    const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 15000);
+    console.log(`[WB-Sync] Reconnecting in ${timeout}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})…`);
 
     setTimeout(() => {
         if (currentRoom) {
@@ -97,19 +171,21 @@ function attemptReconnect() {
     }, timeout);
 }
 
-// Send message through WebSocket
+// ──────────────────────────────────────────────────────────────
+// Send message
+// ──────────────────────────────────────────────────────────────
 function sendMessage(message) {
     if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
         wsConnection.send(JSON.stringify(message));
     } else {
-        console.warn('WebSocket not connected, cannot send message');
+        console.warn('[WB-Sync] Cannot send — not connected:', message.type);
     }
 }
 
-// Handle incoming messages
+// ──────────────────────────────────────────────────────────────
+// Incoming message dispatcher
+// ──────────────────────────────────────────────────────────────
 function handleIncomingMessage(message) {
-    console.log('Received message:', message.type);
-
     switch (message.type) {
         case 'whiteboard-draw':
             handleRemoteDraw(message.drawData);
@@ -123,43 +199,56 @@ function handleIncomingMessage(message) {
         case 'whiteboard-request-state':
             handleStateRequest();
             break;
-        case 'user-joined':
-            if (message.email !== getUserEmail()) {
-                console.log(`User ${message.email} joined the whiteboard`);
-                showNotification(`${message.email.split('@')[0]} joined the whiteboard`, 'info');
-                // Send current canvas state to new user
+        case 'user-joined': {
+            const email = message.email || 'Someone';
+            if (email !== getUserEmail()) {
+                console.log(`[WB-Sync] ${email} joined`);
+                showNotification(`${email.split('@')[0]} joined the whiteboard`, 'info');
+                // Push current canvas to the new user
                 sendCanvasState();
             }
             break;
-        case 'user-left':
-            console.log(`User ${message.email} left the whiteboard`);
-            showNotification(`${message.email.split('@')[0]} left the whiteboard`, 'info');
+        }
+        case 'user-left': {
+            const email = message.email || 'Someone';
+            console.log(`[WB-Sync] ${email} left`);
+            showNotification(`${email.split('@')[0]} left the whiteboard`, 'info');
+            break;
+        }
+        case 'whiteboard-ping':
+            // Server echoed our ping — ignore
             break;
         case 'error':
-            console.error('Server error:', message.message);
-            showNotification(message.message, 'error');
+            console.error('[WB-Sync] Server error:', message.message);
+            showNotification(message.message || 'Server error', 'error');
+            break;
+        default:
+            // Ignore unknown types (e.g. heartbeat pong from other features)
             break;
     }
 }
 
-// Notification helper
+// ──────────────────────────────────────────────────────────────
+// Toast notification helper
+// ──────────────────────────────────────────────────────────────
 function showNotification(message, type = 'info') {
     if (window.toast) {
         if (type === 'success') window.toast.success(message);
         else if (type === 'error') window.toast.error(message);
         else window.toast.info(message);
     } else {
-        console.log(`${type.toUpperCase()}: ${message}`);
+        console.log(`[WB-Sync] ${type.toUpperCase()}: ${message}`);
     }
 }
 
-// Handle remote draw action
+// ──────────────────────────────────────────────────────────────
+// Remote draw handler (normalized coordinates → local pixels)
+// ──────────────────────────────────────────────────────────────
 function handleRemoteDraw(drawData) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
     if (!ctx || !drawData) return;
 
-    // Apply stroke style
     ctx.strokeStyle = drawData.color || '#202124';
     ctx.lineWidth = drawData.lineWidth || 3;
     ctx.lineCap = 'round';
@@ -172,17 +261,16 @@ function handleRemoteDraw(drawData) {
         ctx.globalCompositeOperation = 'source-over';
     }
 
-    // Denormalize coordinates based on local canvas size
-    const fromX = drawData.fromX * canvas.width;
-    const fromY = drawData.fromY * canvas.height;
-    const toX   = (drawData.toX   || 0) * canvas.width;
-    const toY   = (drawData.toY   || 0) * canvas.height;
+    // Denormalize: coordinates come in as 0–1 fractions of sender's canvas
+    const fromX  = (drawData.fromX  || 0) * canvas.width;
+    const fromY  = (drawData.fromY  || 0) * canvas.height;
+    const toX    = (drawData.toX    || 0) * canvas.width;
+    const toY    = (drawData.toY    || 0) * canvas.height;
     const startX = (drawData.startX || 0) * canvas.width;
     const startY = (drawData.startY || 0) * canvas.height;
 
     switch (drawData.tool) {
         case 'pen':
-            // FIX: beginPath + moveTo + lineTo for correct segment rendering
             ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(toX, toY);
@@ -193,10 +281,8 @@ function handleRemoteDraw(drawData) {
             if (drawData.savedState) {
                 const img = new Image();
                 img.onload = () => {
-                    // Restore background then draw shape on top
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    // Re-apply stroke settings after drawImage (context state may shift)
                     ctx.strokeStyle = drawData.color || '#202124';
                     ctx.lineWidth = drawData.lineWidth || 3;
                     ctx.lineCap = 'round';
@@ -219,10 +305,10 @@ function handleRemoteDraw(drawData) {
                     ctx.strokeStyle = drawData.color || '#202124';
                     ctx.lineWidth = drawData.lineWidth || 3;
                     ctx.globalCompositeOperation = 'source-over';
-                    const width  = (drawData.width  || 0) * canvas.width;
-                    const height = (drawData.height || 0) * canvas.height;
+                    const w = (drawData.width  || 0) * canvas.width;
+                    const h = (drawData.height || 0) * canvas.height;
                     ctx.beginPath();
-                    ctx.strokeRect(startX, startY, width, height);
+                    ctx.strokeRect(startX, startY, w, h);
                 };
                 img.src = drawData.savedState;
             }
@@ -237,9 +323,8 @@ function handleRemoteDraw(drawData) {
                     ctx.strokeStyle = drawData.color || '#202124';
                     ctx.lineWidth = drawData.lineWidth || 3;
                     ctx.globalCompositeOperation = 'source-over';
-                    // FIX: Use same diagLen formula as whiteboard.js
                     const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
-                    const radius = (drawData.radius || 0) * diagLen;
+                    const radius  = (drawData.radius || 0) * diagLen;
                     ctx.beginPath();
                     ctx.arc(startX, startY, radius, 0, Math.PI * 2);
                     ctx.stroke();
@@ -250,103 +335,106 @@ function handleRemoteDraw(drawData) {
     }
 }
 
-// Handle receiving full canvas state
+// ──────────────────────────────────────────────────────────────
+// Full canvas state — received from server or peer
+// ──────────────────────────────────────────────────────────────
 function handleRemoteState(state) {
     if (!state) return;
-
     const canvas = document.getElementById('canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
     if (!ctx) return;
 
-    console.log('Applying remote canvas state');
-
     const img = new Image();
     img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Scale to fit local canvas
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        console.log('Canvas state applied successfully');
+        console.log('[WB-Sync] Canvas state applied');
     };
-    img.onerror = () => {
-        console.error('Failed to load canvas state image');
-    };
+    img.onerror = () => console.error('[WB-Sync] Failed to load canvas state image');
     img.src = state;
 }
 
-// Handle remote clear
+// ──────────────────────────────────────────────────────────────
+// Remote clear
+// ──────────────────────────────────────────────────────────────
 function handleRemoteClear() {
     const canvas = document.getElementById('canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
     if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        console.log('Canvas cleared by remote user');
     }
 }
 
-// Handle state request from another user
+// ──────────────────────────────────────────────────────────────
+// State request handler — another user asked for our canvas
+// ──────────────────────────────────────────────────────────────
 function handleStateRequest() {
     sendCanvasState();
 }
 
-// Send current canvas state to server
+// ──────────────────────────────────────────────────────────────
+// Send full canvas snapshot (JPEG at 70% quality to keep size under 500KB)
+// ──────────────────────────────────────────────────────────────
 function sendCanvasState() {
     const canvas = document.getElementById('canvas');
     if (!canvas || !currentRoom) return;
 
-    const state = canvas.toDataURL('image/png');
+    // Use JPEG at 0.7 quality — ~5-10x smaller than PNG, plenty for whiteboard
+    const state = canvas.toDataURL('image/jpeg', 0.7);
     sendMessage({
         type: 'whiteboard-state',
         room: currentRoom,
         state: state
     });
-    console.log('Sent canvas state to server');
+    console.log('[WB-Sync] Canvas state sent');
 }
 
-// Broadcast a draw action
+// ──────────────────────────────────────────────────────────────
+// Broadcast helpers
+// ──────────────────────────────────────────────────────────────
 function broadcastDraw(drawData) {
     if (!currentRoom) return;
-
-    sendMessage({
-        type: 'whiteboard-draw',
-        room: currentRoom,
-        drawData: drawData
-    });
+    sendMessage({ type: 'whiteboard-draw', room: currentRoom, drawData });
 }
 
-// Broadcast canvas clear
 function broadcastClear() {
     if (!currentRoom) return;
-
-    sendMessage({
-        type: 'whiteboard-clear',
-        room: currentRoom
-    });
+    sendMessage({ type: 'whiteboard-clear', room: currentRoom });
 }
 
-// Get user email from localStorage or session
+// ──────────────────────────────────────────────────────────────
+// Get user email
+// ──────────────────────────────────────────────────────────────
 function getUserEmail() {
     try {
-        const user = JSON.parse(localStorage.getItem('userDetails') || sessionStorage.getItem('userDetails'));
+        const raw = localStorage.getItem('userDetails') || sessionStorage.getItem('userDetails');
+        const user = raw ? JSON.parse(raw) : null;
         return user?.email || 'anonymous';
     } catch {
         return 'anonymous';
     }
 }
 
-// Disconnect from WebSocket
+// ──────────────────────────────────────────────────────────────
+// Disconnect
+// ──────────────────────────────────────────────────────────────
 function disconnectWhiteboardSync() {
+    stopKeepAlive();
     if (wsConnection) {
+        wsConnection.onclose = null;
         wsConnection.close();
         wsConnection = null;
     }
     isConnected = false;
     currentRoom = null;
-    console.log('Disconnected from whiteboard sync');
+    setConnectionStatus('disconnected');
 }
 
-// Expose functions globally
-window.initWhiteboardSync = initWhiteboardSync;
-window.broadcastDraw = broadcastDraw;
-window.broadcastClear = broadcastClear;
-window.sendCanvasState = sendCanvasState;
+// ──────────────────────────────────────────────────────────────
+// Global exports
+// ──────────────────────────────────────────────────────────────
+window.initWhiteboardSync     = initWhiteboardSync;
+window.broadcastDraw          = broadcastDraw;
+window.broadcastClear         = broadcastClear;
+window.sendCanvasState        = sendCanvasState;
 window.disconnectWhiteboardSync = disconnectWhiteboardSync;

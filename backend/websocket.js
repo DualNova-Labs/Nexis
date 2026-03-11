@@ -100,6 +100,13 @@ function setupWebSocket(server) {
                     case 'whiteboard-request-state':
                         await handleWhiteboardRequestState(ws, message);
                         break;
+                    case 'whiteboard-ping':
+                        // Client keep-alive ping — just reset reconnect counter, no reply needed
+                        {
+                            const clientInfo = clients.get(ws);
+                            if (clientInfo) clientInfo.reconnectAttempts = 0;
+                        }
+                        break;
                 }
             } catch (error) {
                 console.error('Error handling WebSocket message:', error);
