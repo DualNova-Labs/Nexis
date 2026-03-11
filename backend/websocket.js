@@ -372,6 +372,12 @@ function setupWebSocket(server) {
     async function handleWhiteboardDraw(ws, message) {
         const { room, drawData } = message;
         
+        // Guard: skip if drawData is missing or room is unknown
+        if (!room || !drawData) {
+            console.warn('handleWhiteboardDraw: missing room or drawData');
+            return;
+        }
+        
         // Broadcast draw action to all other users in the room
         await broadcastToRoom(room, {
             type: 'whiteboard-draw',
@@ -404,7 +410,8 @@ function setupWebSocket(server) {
         
         // Broadcast clear to all users
         await broadcastToRoom(room, {
-            type: 'whiteboard-clear'
+            type: 'whiteboard-clear',
+            room: room
         }, ws);
     }
     

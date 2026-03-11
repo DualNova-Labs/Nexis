@@ -197,10 +197,13 @@ function onHandResults(results) {
 
     if (isPinching) {
         if (!isDrawingWithHand) {
-            // Start drawing
+            // Start drawing - initialize the path
             isDrawingWithHand = true;
             if (handTracker) handTracker.classList.add('drawing');
             
+            // FIX: Set lastHandPosition BEFORE moveTo so first segment is correct
+            lastHandPosition = { x: smoothedX, y: smoothedY };
+
             // Set up drawing style on main canvas
             mainCtx.strokeStyle = window.currentColor || '#202124';
             mainCtx.lineWidth = 3;
@@ -211,22 +214,20 @@ function onHandResults(results) {
             // Start a new path on the main canvas
             mainCtx.beginPath();
             mainCtx.moveTo(smoothedX, smoothedY);
-            
-            // Store start position for broadcast
-            lastHandPosition = { x: smoothedX, y: smoothedY };
         } else {
             // Continue drawing
             mainCtx.lineTo(smoothedX, smoothedY);
             mainCtx.stroke();
             
-            // Broadcast hand draw stroke to other users
+            // FIX: Normalize against canvasRect dimensions (CSS pixels) not canvas.width (buffer pixels)
+            // canvasRect.width matches the coordinate space of smoothedX/smoothedY
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
                     tool: 'pen',
-                    fromX: lastHandPosition.x / mainCanvas.width,
-                    fromY: lastHandPosition.y / mainCanvas.height,
-                    toX: smoothedX / mainCanvas.width,
-                    toY: smoothedY / mainCanvas.height,
+                    fromX: lastHandPosition.x / canvasRect.width,
+                    fromY: lastHandPosition.y / canvasRect.height,
+                    toX: smoothedX / canvasRect.width,
+                    toY: smoothedY / canvasRect.height,
                     color: window.currentColor || '#202124',
                     lineWidth: 3,
                     isEraser: false
@@ -238,14 +239,17 @@ function onHandResults(results) {
         }
     } else {
         if (isDrawingWithHand) {
-            // Stop drawing
+            // Stop drawing - send final canvas state for perfect sync
             isDrawingWithHand = false;
             if (handTracker) handTracker.classList.remove('drawing');
+            if (typeof sendCanvasState === 'function') sendCanvasState();
         }
     }
 
-    // Update last position
-    lastHandPosition = { x: smoothedX, y: smoothedY };
+    // Update last position for non-drawing movement
+    if (!isPinching) {
+        lastHandPosition = { x: smoothedX, y: smoothedY };
+    }
 
     // Ensure tracker is visible when hand is detected
     if (handTracker) handTracker.classList.add('active');

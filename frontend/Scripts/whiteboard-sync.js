@@ -146,7 +146,7 @@ function handleRemoteDraw(drawData) {
     const ctx = canvas ? canvas.getContext('2d') : null;
     if (!ctx || !drawData) return;
 
-    // Apply the drawing action
+    // Apply stroke style
     ctx.strokeStyle = drawData.color || '#202124';
     ctx.lineWidth = drawData.lineWidth || 3;
     ctx.lineCap = 'round';
@@ -154,7 +154,7 @@ function handleRemoteDraw(drawData) {
 
     if (drawData.isEraser) {
         ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = 20;
+        ctx.lineWidth = drawData.lineWidth || 20;
     } else {
         ctx.globalCompositeOperation = 'source-over';
     }
@@ -162,24 +162,32 @@ function handleRemoteDraw(drawData) {
     // Denormalize coordinates based on local canvas size
     const fromX = drawData.fromX * canvas.width;
     const fromY = drawData.fromY * canvas.height;
-    const toX = drawData.toX * canvas.width;
-    const toY = drawData.toY * canvas.height;
+    const toX   = (drawData.toX   || 0) * canvas.width;
+    const toY   = (drawData.toY   || 0) * canvas.height;
     const startX = (drawData.startX || 0) * canvas.width;
     const startY = (drawData.startY || 0) * canvas.height;
 
     switch (drawData.tool) {
         case 'pen':
+            // FIX: beginPath + moveTo + lineTo for correct segment rendering
             ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(toX, toY);
             ctx.stroke();
             break;
+
         case 'line':
             if (drawData.savedState) {
                 const img = new Image();
                 img.onload = () => {
+                    // Restore background then draw shape on top
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    // Re-apply stroke settings after drawImage (context state may shift)
+                    ctx.strokeStyle = drawData.color || '#202124';
+                    ctx.lineWidth = drawData.lineWidth || 3;
+                    ctx.lineCap = 'round';
+                    ctx.globalCompositeOperation = 'source-over';
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     ctx.lineTo(toX, toY);
@@ -188,13 +196,17 @@ function handleRemoteDraw(drawData) {
                 img.src = drawData.savedState;
             }
             break;
+
         case 'rectangle':
             if (drawData.savedState) {
                 const img = new Image();
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const width = (drawData.width || 0) * canvas.width;
+                    ctx.strokeStyle = drawData.color || '#202124';
+                    ctx.lineWidth = drawData.lineWidth || 3;
+                    ctx.globalCompositeOperation = 'source-over';
+                    const width  = (drawData.width  || 0) * canvas.width;
                     const height = (drawData.height || 0) * canvas.height;
                     ctx.beginPath();
                     ctx.strokeRect(startX, startY, width, height);
@@ -202,13 +214,19 @@ function handleRemoteDraw(drawData) {
                 img.src = drawData.savedState;
             }
             break;
+
         case 'circle':
             if (drawData.savedState) {
                 const img = new Image();
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const radius = (drawData.radius || 0) * Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2)) / Math.sqrt(2);
+                    ctx.strokeStyle = drawData.color || '#202124';
+                    ctx.lineWidth = drawData.lineWidth || 3;
+                    ctx.globalCompositeOperation = 'source-over';
+                    // FIX: Use same diagLen formula as whiteboard.js
+                    const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
+                    const radius = (drawData.radius || 0) * diagLen;
                     ctx.beginPath();
                     ctx.arc(startX, startY, radius, 0, Math.PI * 2);
                     ctx.stroke();

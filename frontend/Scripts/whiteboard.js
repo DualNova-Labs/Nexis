@@ -25,8 +25,9 @@ function resizeCanvas() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
+    // FIX: Scale to new canvas size to avoid content loss on resize
     if (tempCanvas.width > 0 && tempCanvas.height > 0) {
-        ctx.drawImage(tempCanvas, 0, 0);
+        ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
     }
 
     savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -113,6 +114,9 @@ function draw(e) {
         ctx.lineWidth = STROKE_WIDTH;
     }
 
+    // Capture eraser strokes for broadcast (pen case handles it below)
+    const broadcastEraser = isEraser;
+
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -123,7 +127,7 @@ function draw(e) {
             ctx.lineTo(x, y);
             ctx.stroke();
             
-            // Broadcast pen stroke
+            // Broadcast pen/eraser stroke with normalized coords
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
                     tool: 'pen',
@@ -132,8 +136,8 @@ function draw(e) {
                     toX: x / canvas.width,
                     toY: y / canvas.height,
                     color: currentColor,
-                    lineWidth: STROKE_WIDTH,
-                    isEraser: isEraser
+                    lineWidth: broadcastEraser ? 20 : STROKE_WIDTH,
+                    isEraser: broadcastEraser
                 });
             }
             
@@ -146,17 +150,46 @@ function draw(e) {
             ctx.moveTo(startX, startY);
             ctx.lineTo(x, y);
             ctx.stroke();
+            // FIX: Broadcast live line preview with normalized coords
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    tool: 'line',
+                    startX: startX / canvas.width,
+                    startY: startY / canvas.height,
+                    toX: x / canvas.width,
+                    toY: y / canvas.height,
+                    savedState: canvas.toDataURL(),
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH,
+                    isEraser: false
+                });
+            }
             break;
 
-        case 'rectangle':
+        case 'rectangle': {
             ctx.putImageData(savedState, 0, 0);
             const width = x - startX;
             const height = y - startY;
             ctx.beginPath();
             ctx.strokeRect(startX, startY, width, height);
+            // FIX: Broadcast live rect preview with normalized coords
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    tool: 'rectangle',
+                    startX: startX / canvas.width,
+                    startY: startY / canvas.height,
+                    width: width / canvas.width,
+                    height: height / canvas.height,
+                    savedState: canvas.toDataURL(),
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH,
+                    isEraser: false
+                });
+            }
             break;
+        }
 
-        case 'circle':
+        case 'circle': {
             ctx.putImageData(savedState, 0, 0);
             const radius = Math.sqrt(
                 Math.pow(x - startX, 2) +
@@ -165,7 +198,22 @@ function draw(e) {
             ctx.beginPath();
             ctx.arc(startX, startY, radius, 0, Math.PI * 2);
             ctx.stroke();
+            // FIX: Broadcast live circle preview with normalized radius
+            if (typeof broadcastDraw === 'function') {
+                const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
+                broadcastDraw({
+                    tool: 'circle',
+                    startX: startX / canvas.width,
+                    startY: startY / canvas.height,
+                    radius: radius / diagLen,
+                    savedState: canvas.toDataURL(),
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH,
+                    isEraser: false
+                });
+            }
             break;
+        }
     }
 }
 
