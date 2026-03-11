@@ -50,6 +50,9 @@ let peerConnection = null;
 let ws = null;
 let currentRoomId = null;
 let isInitiator = false;
+let currentQuality = 'high'; // Default quality for screen sharing
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 let pendingIceCandidates = []; // Queue for ICE candidates that arrive before peer connection is ready
 
 // Get user details from localStorage
@@ -98,6 +101,8 @@ function initializeWebSocket() {
 
     ws.onopen = () => {
         console.log('WebSocket connected');
+        // FIX #1: Reset reconnect counter on successful connection
+        reconnectAttempts = 0;
         if (currentRoomId) {
             sendMessage({
                 type: 'join',
@@ -114,29 +119,36 @@ function initializeWebSocket() {
 
             switch (message.type) {
                 case 'user-joined':
-                    console.log('User joined:', message.email);
+                    console.log('👤 User joined:', message.email);
                     isInitiator = true;
                     // If we are already sharing, send offer to the new user
                     if (screenStream) {
-                        console.log('Already sharing, initiating negotiation...');
+                        console.log('🎬 Already sharing, initiating negotiation...');
                         await createAndSendOffer();
                     }
                     break;
                 case 'offer':
-                    console.log('Received offer');
+                    console.log('📥 Received offer, handling...');
                     await handleOffer(message.offer);
                     break;
                 case 'answer':
-                    console.log('Received answer');
+                    console.log('📥 Received answer, handling...');
                     await handleAnswer(message.answer);
                     break;
                 case 'ice-candidate':
-                    console.log('Received ICE candidate');
+                    console.log('🧊 Received ICE candidate');
                     await handleIceCandidate(message.candidate);
                     break;
                 case 'user-left':
-                    console.log('User left:', message.email);
+                    console.log('👋 User left:', message.email);
                     handleUserLeft();
+                    break;
+                case 'room-info':
+                    console.log('ℹ️ Room info received, participants:', message.participants);
+                    break;
+                case 'error':
+                    console.error('❌ Server error:', message.message);
+                    handleError({ message: message.message });
                     break;
             }
         } catch (error) {
@@ -146,6 +158,13 @@ function initializeWebSocket() {
 
     ws.onclose = () => {
         console.log('WebSocket disconnected');
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            setTimeout(() => {
+                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                initializeWebSocket();
+            }, 5000 * reconnectAttempts);
+        }
     };
 
     ws.onerror = (error) => {
@@ -158,6 +177,7 @@ async function createPeerConnection() {
     try {
         if (peerConnection) {
             peerConnection.close();
+            peerConnection = null;
         }
 
         peerConnection = new RTCPeerConnection(configuration);
@@ -175,10 +195,12 @@ async function createPeerConnection() {
         };
 
         peerConnection.ontrack = (event) => {
-            console.log('Received remote track');
-            if (screenVideo.srcObject !== event.streams[0]) {
-                screenVideo.srcObject = event.streams[0];
-                console.log('Set remote screen stream');
+            console.log('✅ Received remote track');
+            if (event.streams && event.streams[0]) {
+                if (screenVideo.srcObject !== event.streams[0]) {
+                    screenVideo.srcObject = event.streams[0];
+                    console.log('Set remote screen stream');
+                }
             }
         };
 
@@ -187,6 +209,8 @@ async function createPeerConnection() {
             if (peerConnection.iceConnectionState === 'failed') {
                 console.log('ICE connection failed, restarting...');
                 peerConnection.restartIce();
+            } else if (peerConnection.iceConnectionState === 'connected') {
+                console.log('✅ ICE connection established!');
             }
         };
 
@@ -194,11 +218,20 @@ async function createPeerConnection() {
             console.log('Connection state:', peerConnection.connectionState);
         };
 
-        // Add screen stream if available
+        peerConnection.onsignalingstatechange = () => {
+            console.log('📡 Signaling state:', peerConnection.signalingState);
+        };
+
+        // FIX #3: Only add tracks if screenStream exists AND
+        // tracks are not already added (prevent duplication on renegotiation)
         if (screenStream) {
-            console.log('Adding screen stream tracks');
+            const existingSenders = peerConnection.getSenders();
             screenStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, screenStream);
+                const alreadyAdded = existingSenders.find(s => s.track && s.track.id === track.id);
+                if (!alreadyAdded) {
+                    peerConnection.addTrack(track, screenStream);
+                    console.log('Added track:', track.kind);
+                }
             });
         }
 
@@ -212,18 +245,21 @@ async function createPeerConnection() {
     }
 }
 
-// Create and send offer
+// Create and send offer with bandwidth constraints
 async function createAndSendOffer() {
     try {
         if (!peerConnection) {
             await createPeerConnection();
         }
 
-        console.log('Creating and sending offer');
+        console.log('🎬 Creating and sending offer');
         const offer = await peerConnection.createOffer({
             offerToReceiveVideo: true,
             offerToReceiveAudio: true
         });
+
+        // Add bandwidth constraints (if in production/low bandwidth environment)
+        offer.sdp = updateBandwidthRestriction(offer.sdp, getBitrateForQuality(currentQuality));
 
         await peerConnection.setLocalDescription(offer);
         sendMessage({
@@ -236,22 +272,31 @@ async function createAndSendOffer() {
     }
 }
 
-// Handle incoming offer
+// Handle incoming offer with stable check and rollback
 async function handleOffer(offer) {
     try {
         if (!peerConnection) {
             await createPeerConnection();
         }
 
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log('Set remote description from offer');
+        if (peerConnection.signalingState !== 'stable') {
+            console.log('📡 Signaling state not stable, rolling back');
+            await Promise.all([
+                peerConnection.setLocalDescription({ type: "rollback" }),
+                peerConnection.setRemoteDescription(offer)
+            ]);
+        } else {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        }
+        
+        console.log('✅ Set remote description from offer');
 
         // Process any queued ICE candidates now that we have remote description
         await processPendingIceCandidates();
 
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        console.log('Created and set local description (answer)');
+        console.log('✅ Created and set local description (answer)');
 
         sendMessage({
             type: 'answer',
@@ -342,12 +387,7 @@ async function enterRoom() {
     currentRoomId = roomId;
     isInitiator = true;
     await startScreenRoom(roomId);
-
-    sendMessage({
-        type: 'join',
-        room: roomId,
-        email: userDetails.email
-    });
+    // FIX #2: Join message is now sent inside startScreenRoom after WS is guaranteed open
 }
 
 // Function to join an existing room
@@ -360,7 +400,11 @@ async function joinExistingRoom() {
     currentRoomId = roomId;
     isInitiator = false;
     await startScreenRoom(roomId);
+    // FIX #2: Join message is now sent inside startScreenRoom after WS is guaranteed open
+}
 
+// FIX #2: Helper to send join after WS is confirmed open
+function sendJoinMessage(roomId) {
     sendMessage({
         type: 'join',
         room: roomId,
@@ -371,18 +415,26 @@ async function joinExistingRoom() {
 // Function to start the screen share room
 async function startScreenRoom(roomId) {
     try {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            initializeWebSocket();
-        }
-
-        roomSelection.style.display = 'none';
-        screenRoom.style.display = 'flex';
+        // FIX #4: Do NOT override display here — let screenshare.html wrapper handle it
+        // Only update the room ID label
         roomIdSpan.textContent = roomId;
 
         await createPeerConnection();
 
         startShareBtn.disabled = false;
         stopShareBtn.disabled = true;
+
+        // FIX #2: Guarantee WS is open before sending join, with proper fallback
+        if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            // WS not open — init it; onopen handler will call the join automatically
+            initializeWebSocket();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+            // WS is still connecting — wait for it to open
+            ws.addEventListener('open', () => sendJoinMessage(roomId), { once: true });
+        } else {
+            // WS already open — send immediately
+            sendJoinMessage(roomId);
+        }
     } catch (error) {
         console.error('Error starting screen room:', error);
         alert('Failed to start screen sharing room. Please try again.');
@@ -392,32 +444,51 @@ async function startScreenRoom(roomId) {
 // Event listeners for screen share controls
 startShareBtn.addEventListener('click', async () => {
     try {
+        // FIX #5: Enhanced getDisplayMedia constraints for better quality
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true
+            video: {
+                cursor: 'always',
+                frameRate: { ideal: 30, max: 60 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            }
         });
 
         screenVideo.srcObject = screenStream;
 
-        // Add tracks to peer connection
+        // FIX #3: Add tracks to peer connection, avoiding duplicates
         console.log('Adding tracks to peer connection');
+        const existingSenders = peerConnection.getSenders();
         screenStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, screenStream);
+            const alreadyAdded = existingSenders.find(s => s.track && s.track.id === track.id);
+            if (!alreadyAdded) {
+                peerConnection.addTrack(track, screenStream);
+                console.log('Added track:', track.kind);
+            }
         });
 
         // Always trigger negotiation when we start sharing
         await createAndSendOffer();
 
         // Listen for when user stops sharing through browser controls
-        screenStream.getVideoTracks()[0].addEventListener('ended', () => {
-            stopSharing();
-        });
+        const videoTrack = screenStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.addEventListener('ended', () => stopSharing());
+        }
 
         startShareBtn.disabled = true;
         stopShareBtn.disabled = false;
     } catch (error) {
         console.error('Error starting screen share:', error);
-        alert('Failed to start screen sharing. Please try again.');
+        if (error.name !== 'NotAllowedError') {
+            // Don't alert if user simply cancelled the picker
+            alert('Failed to start screen sharing. Please try again.');
+        }
     }
 });
 
@@ -442,6 +513,36 @@ function stopSharing() {
     });
 
     window.location.href = './dashboard.html';
+}
+
+// --- Utility Functions (Synced from video.js) ---
+
+function updateBandwidthRestriction(sdp, bandwidth) {
+    let modifier = 'AS';
+    if (sdp.indexOf('b=' + modifier + ':') === -1) {
+        sdp = sdp.replace(/c=IN (.*)\r\n/g, 'c=IN $1\r\nb=' + modifier + ':' + bandwidth + '\r\n');
+    } else {
+        sdp = sdp.replace(new RegExp('b=' + modifier + ':.*\r\n'), 'b=' + modifier + ':' + bandwidth + '\r\n');
+    }
+    return sdp;
+}
+
+function getBitrateForQuality(quality) {
+    switch (quality) {
+        case 'high': return 3000; // 3 Mbps for screen sharing
+        case 'medium': return 1500;
+        case 'low': return 750;
+        default: return 2000;
+    }
+}
+
+function handleError(error) {
+    console.error('❌ Connection error:', error);
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#d93025;color:white;padding:12px 24px;border-radius:8px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-weight:500;';
+    errorDiv.textContent = error.message || 'Connection error. Please refresh.';
+    document.body.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 5000);
 }
 
 // Check URL parameters for action
