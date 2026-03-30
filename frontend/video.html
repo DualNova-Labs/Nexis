@@ -100,6 +100,7 @@
         .main-container {
             flex-grow: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 40px 24px;
@@ -646,13 +647,13 @@
     </nav>
 
     <div class="main-container" id="selectionContainer">
-        <!-- HTTP/LAN Warning Banner -->
-        <div id="lanWarningBanner" style="display:none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; padding: 12px 20px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto 20px;">
-            <i class="material-icons-outlined" style="font-size: 20px; flex-shrink: 0;">warning</i>
-            <span><strong>Camera unavailable on HTTP.</strong> Your browser blocks camera access when using a non-localhost IP without HTTPS. A <strong>test stream</strong> will be used automatically. To use your real camera, open <em>http://localhost:8080</em> on this device.</span>
-        </div>
         <!-- Room Selection -->
         <div id="roomSelection" class="room-selection">
+            <!-- HTTP/LAN Warning Banner -->
+            <div id="lanWarningBanner" style="display:none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; padding: 16px 20px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);">
+                <i class="material-icons-outlined" style="font-size: 22px; flex-shrink: 0; margin-top: 2px;">warning</i>
+                <span><strong>Camera unavailable on HTTP.</strong> Your browser blocks camera access when using a non-localhost IP without HTTPS. A <strong>test stream</strong> will be used automatically. To use your real camera, open <em>http://localhost:8080</em> on this device.</span>
+            </div>
             <!-- Create Room Section -->
             <div id="createRoom" class="room-card" style="display: none;">
                 <div class="room-icon-wrapper">
@@ -884,6 +885,20 @@
             
             if (originalJoin) originalJoin();
         };
+
+        // Check for LAN/HTTP and show warning if necessary
+        document.addEventListener('DOMContentLoaded', () => {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isHttps = window.location.protocol === 'https:';
+            const mediaDevicesAvailable = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+            if (!isHttps && !isLocalhost && !mediaDevicesAvailable) {
+                const banner = document.getElementById('lanWarningBanner');
+                if (banner) {
+                    banner.style.display = 'flex';
+                }
+            }
+        });
     </script>
 </body>
 

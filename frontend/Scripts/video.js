@@ -416,7 +416,6 @@ async function startVideoRoom(roomId) {
 
             let stream;
 
-<<<<<<< HEAD
             // Check if mediaDevices API is available (requires HTTPS or localhost)
             const mediaDevicesAvailable = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
@@ -426,11 +425,6 @@ async function startVideoRoom(roomId) {
                     console.warn('navigator.mediaDevices is unavailable (HTTP over LAN). Falling back to test stream. To use your real camera, access via localhost or enable HTTPS.');
                 }
                 console.log('Using test stream...');
-=======
-            // Check if test mode is selected
-            if (cameraSelect.value === 'test') {
-                console.log('Test mode selected, creating test stream');
->>>>>>> b7f74859959fd83b10f998b42d97f5ed218c63ef
                 stream = createTestStream();
             } else {
                 const constraints = {
@@ -443,18 +437,10 @@ async function startVideoRoom(roomId) {
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                 } catch (err) {
                     console.error('getUserMedia error:', err);
-<<<<<<< HEAD
-                    
                     // If camera is in use or any error, automatically fall back to test mode
                     if (err.name === 'NotReadableError' || err.name === 'TrackStartError' ||
                         err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
                         console.log('Camera unavailable, automatically switching to test mode...');
-=======
-
-                    // If camera is in use, automatically fall back to test mode
-                    if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                        console.log('Camera in use, automatically switching to test mode...');
->>>>>>> b7f74859959fd83b10f998b42d97f5ed218c63ef
                         stream = createTestStream();
                     } else {
                         throw err;
@@ -598,7 +584,7 @@ if (isAuthenticated) {
         newRoomIdSpan.textContent = newRoomId;
         createRoomDiv.style.display = 'block';
         joinRoomDiv.style.display = 'none';
-        console.log('✅ Create room div displayed');
+        console.log('✅ Create room div displayed with ID:', newRoomId);
     } else if (action === 'join') {
         console.log('🔗 Joining room...');
         createRoomDiv.style.display = 'none';
@@ -759,12 +745,6 @@ function handleMediaError(error) {
 // Add this function after the other utility functions
 async function loadCameras() {
     try {
-<<<<<<< HEAD
-=======
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-
->>>>>>> b7f74859959fd83b10f998b42d97f5ed218c63ef
         cameraSelect.innerHTML = '';
 
         if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
@@ -839,8 +819,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await startVideoRoom(currentRoomId);
         }
     });
-<<<<<<< HEAD
-    
     // Request camera permissions to get labels (only if API is available)
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -850,14 +828,4 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(console.error);
     }
-=======
-
-    // Request camera permissions to get labels
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            stream.getTracks().forEach(track => track.stop());
-            loadCameras();
-        })
-        .catch(console.error);
->>>>>>> b7f74859959fd83b10f998b42d97f5ed218c63ef
 }); 
