@@ -1,6 +1,6 @@
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
+// API_URL and WS_URL are set globally by Scripts/config.js
+const API_URL = window.API_URL || 'http://localhost:3001';
+const WS_URL = window.WS_URL || 'ws://localhost:3001';
 
 // Get DOM elements
 const messageContainer = document.getElementById('messageContainer');
@@ -117,6 +117,13 @@ async function loadMessages() {
     }
 }
 
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Display messages
 function displayMessages(messages) {
     console.log('Displaying messages:', messages.length);
@@ -125,13 +132,17 @@ function displayMessages(messages) {
         return;
     }
 
-    messageContainer.innerHTML = messages.map(msg => `
+    messageContainer.innerHTML = messages.map(msg => {
+        // Sanitize content to prevent XSS
+        const safeSender = escapeHtml(msg.sender);
+        const safeContent = escapeHtml(msg.content);
+        return `
         <div class="msg-bubble ${msg.sender === userDetails.email ? 'msg-sent' : 'msg-received'}">
-            <div class="msg-sender">${msg.sender}</div>
-            <div class="msg-text">${msg.content}</div>
+            <div class="msg-sender">${safeSender}</div>
+            <div class="msg-text">${safeContent}</div>
             <div class="msg-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
         </div>
-    `).join('');
+    `}).join('');
 
     // Auto-scroll to bottom
     setTimeout(() => {

@@ -1,0 +1,42 @@
+# =====================
+# Environment & Secrets
+# =====================
+.env
+.env.*
+*.env
+
+# =====================
+# Node.js Dependencies
+# =====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =====================
+# Uploaded User Files
+# =====================
+backend/uploads/*
+# Keep the uploads directory structure but ignore files inside
+!backend/uploads/.dummy
+
+# =====================
+# Build Artifacts
+# =====================
+dist/
+build/
+.cache/
+
+# =====================
+# OS / Editor files
+# =====================
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# =====================
+# Package lock files (optional - include if you want reproducible builds)
+# =====================
+# package-lock.json

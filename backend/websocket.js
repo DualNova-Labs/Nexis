@@ -5,7 +5,7 @@ function setupWebSocket(server) {
     
     // Store active connections and their rooms
     const rooms = new Map();
-    const clients = new Map();
+    const clients = new Map(); // Map<ws, { room, email, reconnectAttempts }>
     
     // Store whiteboard canvas state per room
     const whiteboardStates = new Map();
@@ -13,6 +13,7 @@ function setupWebSocket(server) {
     // Heartbeat interval (30 seconds)
     const HEARTBEAT_INTERVAL = 30000;
     const CLIENT_TIMEOUT = 35000;
+    const MAX_RECONNECT_ATTEMPTS = 5;
     
     function heartbeat() {
         this.isAlive = true;
@@ -43,16 +44,18 @@ function setupWebSocket(server) {
         ws.on('pong', heartbeat);
         
         // Setup error recovery
-        let reconnectAttempts = 0;
-        const MAX_RECONNECT_ATTEMPTS = 5;
+        // reconnectAttempts is stored per-client in the clients Map (see handleError)
         
         ws.on('message', async (data) => {
             try {
                 const message = JSON.parse(data);
-                console.log('Received WebSocket message:', message.type, 'for room:', message.room);
+                console.log(`Received ${message.type} message from ${message.email || 'unknown'} for room ${message.room}`);
                 
-                // Reset reconnect attempts on successful message
-                reconnectAttempts = 0;
+                // Get client info if exists
+                const clientInfo = clients.get(ws);
+                if (clientInfo) {
+                    clientInfo.reconnectAttempts = 0;
+                }
                 
                 switch (message.type) {
                     case 'join':
@@ -97,6 +100,13 @@ function setupWebSocket(server) {
                     case 'whiteboard-request-state':
                         await handleWhiteboardRequestState(ws, message);
                         break;
+                    case 'whiteboard-ping':
+                        // Client keep-alive ping — just reset reconnect counter, no reply needed
+                        {
+                            const clientInfo = clients.get(ws);
+                            if (clientInfo) clientInfo.reconnectAttempts = 0;
+                        }
+                        break;
                 }
             } catch (error) {
                 console.error('Error handling WebSocket message:', error);
@@ -114,18 +124,19 @@ function setupWebSocket(server) {
         });
     });
     
-    // Enhanced error handling
+    // Enhanced error handling (per-client reconnect tracking)
     async function handleError(ws, error) {
         const clientInfo = clients.get(ws);
         if (clientInfo) {
-            reconnectAttempts++;
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            // Increment per-client reconnect counter
+            clientInfo.reconnectAttempts = (clientInfo.reconnectAttempts || 0) + 1;
+            if (clientInfo.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 // Notify client of error and reconnection attempt
                 try {
                     ws.send(JSON.stringify({
                         type: 'error',
                         message: 'Connection error, attempting to reconnect...',
-                        attempt: reconnectAttempts
+                        attempt: clientInfo.reconnectAttempts
                     }));
                 } catch (e) {
                     console.error('Error sending error message:', e);
@@ -151,7 +162,7 @@ function setupWebSocket(server) {
         }
         
         // Store client info
-        clients.set(ws, { room, email });
+        clients.set(ws, { room, email, reconnectAttempts: 0 });
         
         // Add to room
         if (!rooms.has(room)) {
@@ -166,9 +177,11 @@ function setupWebSocket(server) {
         }, ws);
         
         // Send current participants to the new user
+        // FIX: Use optional chaining to avoid crash if a client disconnected concurrently
         const participants = Array.from(rooms.get(room))
             .filter(client => client !== ws)
-            .map(client => clients.get(client).email);
+            .map(client => clients.get(client)?.email)
+            .filter(Boolean); // remove any undefined entries
             
         ws.send(JSON.stringify({
             type: 'room-info',
@@ -337,7 +350,7 @@ function setupWebSocket(server) {
         console.log(`User joining whiteboard room ${room}`);
         
         // Store client info for whiteboard
-        clients.set(ws, { room, email: message.email || 'anonymous' });
+        clients.set(ws, { room, email: message.email || 'anonymous', reconnectAttempts: 0 });
         
         // Add to room
         if (!rooms.has(room)) {
@@ -365,6 +378,12 @@ function setupWebSocket(server) {
     // Handle whiteboard draw - broadcast drawing action to all users in room
     async function handleWhiteboardDraw(ws, message) {
         const { room, drawData } = message;
+        
+        // Guard: skip if drawData is missing or room is unknown
+        if (!room || !drawData) {
+            console.warn('handleWhiteboardDraw: missing room or drawData');
+            return;
+        }
         
         // Broadcast draw action to all other users in the room
         await broadcastToRoom(room, {
@@ -398,7 +417,8 @@ function setupWebSocket(server) {
         
         // Broadcast clear to all users
         await broadcastToRoom(room, {
-            type: 'whiteboard-clear'
+            type: 'whiteboard-clear',
+            room: room
         }, ws);
     }
     

@@ -1,11 +1,12 @@
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
-const WS_URL = `ws://${hostname}:3001`;
+// API_URL and WS_URL are set globally by Scripts/config.js
+const API_URL = window.API_URL || 'http://localhost:3001';
+const WS_URL = window.WS_URL || 'ws://localhost:3001';
 
 // WebSocket for real-time collaboration
 let ws = null;
 let roomParticipants = new Set();
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 // Get DOM elements
 const dropZone = document.getElementById('dropZone');
@@ -117,7 +118,11 @@ window.joinRoom = function () {
     connectWebSocket();
 
     // Show feedback to user
-    showNotification(`Joined room: ${roomCode}`, 'success');
+    if (window.toast) {
+        window.toast.success(`Joined room: ${roomCode}`);
+    } else {
+        console.log(`Joined room: ${roomCode}`);
+    }
 }
 
 function updateRoomUI() {
@@ -181,6 +186,9 @@ window.exitRoom = function () {
         ws = null;
     }
 
+    // Reset reconnect counter so rejoining works cleanly
+    reconnectAttempts = 0;
+
     // Clear room code
     currentRoomCode = null;
     localStorage.removeItem('currentRoomCode');
@@ -212,18 +220,24 @@ function connectWebSocket() {
 
             switch (message.type) {
                 case 'file-uploaded':
-                    // Another user uploaded a file - add it to the list
-                    handleFileUploaded(message.file, message.uploadedBy);
+                    // FIX: Only handle if uploaded by another user to avoid redundant refresh
+                    if (message.uploadedBy !== userDetails.email) {
+                        handleFileUploaded(message.file, message.uploadedBy);
+                    }
                     break;
                 case 'file-deleted':
-                    // Another user deleted a file - remove it from the list
-                    handleFileDeleted(message.fileId);
+                    // FIX: Only handle if deleted by another user to avoid redundant refresh
+                    if (message.deletedBy !== userDetails.email) {
+                        handleFileDeleted(message.fileId);
+                    }
                     break;
                 case 'file-user-joined':
                     // Another user joined the room
                     roomParticipants.add(message.email);
                     updateParticipantsDisplay();
-                    showNotification(`${message.email.split('@')[0]} joined the room`, 'info');
+                    if (message.email !== userDetails.email) {
+                        showNotification(`${message.email.split('@')[0]} joined the room`, 'info');
+                    }
                     break;
                 case 'file-room-info':
                     // Received current participants
@@ -238,17 +252,30 @@ function connectWebSocket() {
 
     ws.onclose = () => {
         console.log('WebSocket disconnected');
-        // Reconnect after 3 seconds
-        setTimeout(() => {
-            if (currentRoomCode) {
-                connectWebSocket();
-            }
-        }, 3000);
+        // Reconnect logic with backoff and limit
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+            console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${timeout}ms...`);
+            
+            setTimeout(() => {
+                if (currentRoomCode) {
+                    connectWebSocket();
+                }
+            }, timeout);
+        } else {
+            showNotification('Real-time connection lost. Please refresh the page.', 'error');
+        }
     };
 
     ws.onerror = (error) => {
         console.error('WebSocket error:', error);
     };
+
+    // Helper: Reset reconnect attempts on successful connection
+    ws.addEventListener('open', () => {
+        reconnectAttempts = 0;
+    });
 }
 
 function joinFileRoom() {
@@ -703,10 +730,14 @@ window.deleteFile = async function (fileId) {
     }
 }
 
-// Simple notification function
+// Simple notification function - now using Toast utility if available
 function showNotification(message, type = 'info') {
-    // You can implement a toast/snackbar here
-    // For now, we'll use console
-    console.log(`${type.toUpperCase()}: ${message}`);
+    if (window.toast) {
+        if (type === 'success') window.toast.success(message);
+        else if (type === 'error') window.toast.error(message);
+        else window.toast.info(message);
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
+    }
 }
 

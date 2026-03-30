@@ -1,7 +1,6 @@
-// Get API base URL - works for both local server and direct file access
-const hostname = window.location.hostname || 'localhost';
-const API_URL = `http://${hostname}:3001`;
-const WS_URL = `ws://${hostname}:3001`;
+// API_URL and WS_URL are set globally by Scripts/config.js
+const API_URL = window.API_URL || 'http://localhost:3001';
+const WS_URL = window.WS_URL || 'ws://localhost:3001';
 
 const roomSelection = document.getElementById('roomSelection');
 const createRoomDiv = document.getElementById('createRoom');
@@ -40,7 +39,10 @@ const configuration = {
             username: 'e8dd65b92aad9a38fbaab7e4',
             credential: 'XhvkOYxj2ckQNNpE'
         }
-    ]
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
 };
 
 let screenStream = null;
@@ -48,10 +50,19 @@ let peerConnection = null;
 let ws = null;
 let currentRoomId = null;
 let isInitiator = false;
+let currentQuality = 'high'; // Default quality for screen sharing
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 let pendingIceCandidates = []; // Queue for ICE candidates that arrive before peer connection is ready
 
 // Get user details from localStorage
-const userDetails = JSON.parse(localStorage.getItem('userDetails'));
+let userDetails = null;
+try {
+    userDetails = JSON.parse(localStorage.getItem('userDetails')) || JSON.parse(sessionStorage.getItem('userDetails'));
+} catch (e) {
+    userDetails = null;
+}
+
 if (!userDetails || !userDetails.email) {
     window.location.href = './login.html';
 }
@@ -59,14 +70,16 @@ if (!userDetails || !userDetails.email) {
 // Session validation: Only allow one active login
 async function validateSession() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+
     try {
-        const res = await fetch(`${API_URL}/user/admin/users`, { // Using a protected route for verification
+        const res = await fetch(`${API_URL}/user/admin/users`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
 
         if (res.status === 401 && data.code === "SESSION_INVALIDATED") {
-            alert(data.msg);
+            handleError({ message: data.msg || 'Session invalidated. Please log in again.' });
             stopSharing(); // Proper cleanup
         }
     } catch (err) {
@@ -80,10 +93,23 @@ setInterval(validateSession, 30000); // Check every 30 seconds
 
 // Initialize WebSocket connection
 function initializeWebSocket() {
+    if (ws) {
+        ws.close();
+    }
+
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
         console.log('WebSocket connected');
+        // FIX #1: Reset reconnect counter on successful connection
+        reconnectAttempts = 0;
+        if (currentRoomId) {
+            sendMessage({
+                type: 'join',
+                room: currentRoomId,
+                email: userDetails.email
+            });
+        }
     };
 
     ws.onmessage = async (event) => {
@@ -93,27 +119,51 @@ function initializeWebSocket() {
 
             switch (message.type) {
                 case 'user-joined':
-                    console.log('User joined:', message.email);
+                    console.log('👤 User joined:', message.email);
                     isInitiator = true;
+                    // If we are already sharing, send offer to the new user
+                    if (screenStream) {
+                        console.log('🎬 Already sharing, initiating negotiation...');
+                        await createAndSendOffer();
+                    }
                     break;
                 case 'offer':
-                    console.log('Received offer');
+                    console.log('📥 Received offer, handling...');
                     await handleOffer(message.offer);
                     break;
                 case 'answer':
-                    console.log('Received answer');
+                    console.log('📥 Received answer, handling...');
                     await handleAnswer(message.answer);
                     break;
                 case 'ice-candidate':
-                    console.log('Received ICE candidate');
+                    console.log('🧊 Received ICE candidate');
                     await handleIceCandidate(message.candidate);
                     break;
                 case 'user-left':
+                    console.log('👋 User left:', message.email);
                     handleUserLeft();
+                    break;
+                case 'room-info':
+                    console.log('ℹ️ Room info received, participants:', message.participants);
+                    break;
+                case 'error':
+                    console.error('❌ Server error:', message.message);
+                    handleError({ message: message.message });
                     break;
             }
         } catch (error) {
             console.error('Error handling message:', error);
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            setTimeout(() => {
+                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                initializeWebSocket();
+            }, 5000 * reconnectAttempts);
         }
     };
 
@@ -125,7 +175,13 @@ function initializeWebSocket() {
 // Initialize peer connection
 async function createPeerConnection() {
     try {
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
         peerConnection = new RTCPeerConnection(configuration);
+        console.log('Created new peer connection');
 
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
@@ -139,24 +195,48 @@ async function createPeerConnection() {
         };
 
         peerConnection.ontrack = (event) => {
-            console.log('Received remote track');
-            if (screenVideo.srcObject !== event.streams[0]) {
-                screenVideo.srcObject = event.streams[0];
-                console.log('Set remote screen stream');
+            console.log('✅ Received remote track');
+            if (event.streams && event.streams[0]) {
+                if (screenVideo.srcObject !== event.streams[0]) {
+                    screenVideo.srcObject = event.streams[0];
+                    console.log('Set remote screen stream');
+                }
             }
         };
 
         peerConnection.oniceconnectionstatechange = () => {
             console.log('ICE connection state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'failed') {
+                console.log('ICE connection failed, restarting...');
+                peerConnection.restartIce();
+            } else if (peerConnection.iceConnectionState === 'connected') {
+                console.log('✅ ICE connection established!');
+            }
         };
 
-        // Add screen stream if available
+        peerConnection.onconnectionstatechange = () => {
+            console.log('Connection state:', peerConnection.connectionState);
+        };
+
+        peerConnection.onsignalingstatechange = () => {
+            console.log('📡 Signaling state:', peerConnection.signalingState);
+        };
+
+        // FIX #3: Only add tracks if screenStream exists AND
+        // tracks are not already added (prevent duplication on renegotiation)
         if (screenStream) {
-            console.log('Adding screen stream tracks');
+            const existingSenders = peerConnection.getSenders();
             screenStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, screenStream);
+                const alreadyAdded = existingSenders.find(s => s.track && s.track.id === track.id);
+                if (!alreadyAdded) {
+                    peerConnection.addTrack(track, screenStream);
+                    console.log('Added track:', track.kind);
+                }
             });
         }
+
+        // Process any queued ICE candidates
+        await processPendingIceCandidates();
 
         return peerConnection;
     } catch (error) {
@@ -165,22 +245,58 @@ async function createPeerConnection() {
     }
 }
 
-// Handle incoming offer
+// Create and send offer with bandwidth constraints
+async function createAndSendOffer() {
+    try {
+        if (!peerConnection) {
+            await createPeerConnection();
+        }
+
+        console.log('🎬 Creating and sending offer');
+        const offer = await peerConnection.createOffer({
+            offerToReceiveVideo: true,
+            offerToReceiveAudio: true
+        });
+
+        // Add bandwidth constraints (if in production/low bandwidth environment)
+        offer.sdp = updateBandwidthRestriction(offer.sdp, getBitrateForQuality(currentQuality));
+
+        await peerConnection.setLocalDescription(offer);
+        sendMessage({
+            type: 'offer',
+            offer: offer,
+            room: currentRoomId
+        });
+    } catch (error) {
+        console.error('Error creating offer:', error);
+    }
+}
+
+// Handle incoming offer with stable check and rollback
 async function handleOffer(offer) {
     try {
         if (!peerConnection) {
             await createPeerConnection();
         }
 
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log('Set remote description from offer');
+        if (peerConnection.signalingState !== 'stable') {
+            console.log('📡 Signaling state not stable, rolling back');
+            await Promise.all([
+                peerConnection.setLocalDescription({ type: "rollback" }),
+                peerConnection.setRemoteDescription(offer)
+            ]);
+        } else {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        }
         
+        console.log('✅ Set remote description from offer');
+
         // Process any queued ICE candidates now that we have remote description
         await processPendingIceCandidates();
 
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        console.log('Created and set local description (answer)');
+        console.log('✅ Created and set local description (answer)');
 
         sendMessage({
             type: 'answer',
@@ -198,7 +314,7 @@ async function handleAnswer(answer) {
         if (peerConnection) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
             console.log('Set remote description from answer');
-            
+
             // Process any queued ICE candidates now that we have remote description
             await processPendingIceCandidates();
         }
@@ -232,7 +348,7 @@ async function processPendingIceCandidates() {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                 console.log('Added queued ICE candidate');
             } catch (error) {
-                console.error('Error adding queued ICE candidate:', error);
+                console.warn('Error adding queued ICE candidate:', error);
             }
         }
         pendingIceCandidates = [];
@@ -243,8 +359,11 @@ async function processPendingIceCandidates() {
 function handleUserLeft() {
     console.log('Remote user left');
     if (screenVideo.srcObject) {
-        screenVideo.srcObject.getTracks().forEach(track => track.stop());
-        screenVideo.srcObject = null;
+        // Clear remote stream if it's not our local stream
+        // In simple 1-to-1, we can just check if screenStream is different
+        if (screenVideo.srcObject !== screenStream) {
+            screenVideo.srcObject = null;
+        }
     }
 }
 
@@ -268,12 +387,7 @@ async function enterRoom() {
     currentRoomId = roomId;
     isInitiator = true;
     await startScreenRoom(roomId);
-
-    sendMessage({
-        type: 'join',
-        room: roomId,
-        email: userDetails.email
-    });
+    // FIX #2: Join message is now sent inside startScreenRoom after WS is guaranteed open
 }
 
 // Function to join an existing room
@@ -286,7 +400,11 @@ async function joinExistingRoom() {
     currentRoomId = roomId;
     isInitiator = false;
     await startScreenRoom(roomId);
+    // FIX #2: Join message is now sent inside startScreenRoom after WS is guaranteed open
+}
 
+// FIX #2: Helper to send join after WS is confirmed open
+function sendJoinMessage(roomId) {
     sendMessage({
         type: 'join',
         room: roomId,
@@ -297,18 +415,26 @@ async function joinExistingRoom() {
 // Function to start the screen share room
 async function startScreenRoom(roomId) {
     try {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            initializeWebSocket();
-        }
-
-        roomSelection.style.display = 'none';
-        screenRoom.style.display = 'flex';
+        // FIX #4: Do NOT override display here — let screenshare.html wrapper handle it
+        // Only update the room ID label
         roomIdSpan.textContent = roomId;
 
         await createPeerConnection();
 
         startShareBtn.disabled = false;
         stopShareBtn.disabled = true;
+
+        // FIX #2: Guarantee WS is open before sending join, with proper fallback
+        if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            // WS not open — init it; onopen handler will call the join automatically
+            initializeWebSocket();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+            // WS is still connecting — wait for it to open
+            ws.addEventListener('open', () => sendJoinMessage(roomId), { once: true });
+        } else {
+            // WS already open — send immediately
+            sendJoinMessage(roomId);
+        }
     } catch (error) {
         console.error('Error starting screen room:', error);
         alert('Failed to start screen sharing room. Please try again.');
@@ -318,40 +444,51 @@ async function startScreenRoom(roomId) {
 // Event listeners for screen share controls
 startShareBtn.addEventListener('click', async () => {
     try {
+        // FIX #5: Enhanced getDisplayMedia constraints for better quality
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true
+            video: {
+                cursor: 'always',
+                frameRate: { ideal: 30, max: 60 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            }
         });
 
         screenVideo.srcObject = screenStream;
 
-        // Add tracks to peer connection
+        // FIX #3: Add tracks to peer connection, avoiding duplicates
+        console.log('Adding tracks to peer connection');
+        const existingSenders = peerConnection.getSenders();
         screenStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, screenStream);
+            const alreadyAdded = existingSenders.find(s => s.track && s.track.id === track.id);
+            if (!alreadyAdded) {
+                peerConnection.addTrack(track, screenStream);
+                console.log('Added track:', track.kind);
+            }
         });
 
-        if (isInitiator) {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            console.log('Created and set local description (offer)');
-
-            sendMessage({
-                type: 'offer',
-                offer: offer,
-                room: currentRoomId
-            });
-        }
+        // Always trigger negotiation when we start sharing
+        await createAndSendOffer();
 
         // Listen for when user stops sharing through browser controls
-        screenStream.getVideoTracks()[0].addEventListener('ended', () => {
-            stopSharing();
-        });
+        const videoTrack = screenStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.addEventListener('ended', () => stopSharing());
+        }
 
         startShareBtn.disabled = true;
         stopShareBtn.disabled = false;
     } catch (error) {
         console.error('Error starting screen share:', error);
-        alert('Failed to start screen sharing. Please try again.');
+        if (error.name !== 'NotAllowedError') {
+            // Don't alert if user simply cancelled the picker
+            alert('Failed to start screen sharing. Please try again.');
+        }
     }
 });
 
@@ -378,13 +515,45 @@ function stopSharing() {
     window.location.href = './dashboard.html';
 }
 
+// --- Utility Functions (Synced from video.js) ---
+
+function updateBandwidthRestriction(sdp, bandwidth) {
+    let modifier = 'AS';
+    if (sdp.indexOf('b=' + modifier + ':') === -1) {
+        sdp = sdp.replace(/c=IN (.*)\r\n/g, 'c=IN $1\r\nb=' + modifier + ':' + bandwidth + '\r\n');
+    } else {
+        sdp = sdp.replace(new RegExp('b=' + modifier + ':.*\r\n'), 'b=' + modifier + ':' + bandwidth + '\r\n');
+    }
+    return sdp;
+}
+
+function getBitrateForQuality(quality) {
+    switch (quality) {
+        case 'high': return 3000; // 3 Mbps for screen sharing
+        case 'medium': return 1500;
+        case 'low': return 750;
+        default: return 2000;
+    }
+}
+
+function handleError(error) {
+    console.error('❌ Connection error:', error);
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#d93025;color:white;padding:12px 24px;border-radius:8px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-weight:500;';
+    errorDiv.textContent = error.message || 'Connection error. Please refresh.';
+    document.body.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 5000);
+}
+
 // Check URL parameters for action
 const urlParams = new URLSearchParams(window.location.search);
 const action = urlParams.get('action');
 
-// Initialize room based on action
 if (action === 'create') {
-    const newRoomId = Math.random().toString(36).substring(7);
+    // Use a stronger, readable room ID (e.g. "X4KP-2MNQ")
+    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newRoomId = `${part1}-${part2}`;
     newRoomIdSpan.textContent = newRoomId;
     createRoomDiv.style.display = 'block';
     joinRoomDiv.style.display = 'none';
@@ -395,5 +564,4 @@ if (action === 'create') {
     window.location.href = './dashboard.html';
 }
 
-// Initialize WebSocket connection
-initializeWebSocket(); 
+// Do NOT init WebSocket here — startScreenRoom() handles it when user enters a room

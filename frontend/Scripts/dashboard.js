@@ -5,10 +5,8 @@ if (!userDetails) {
     window.location.href = './admin-dashboard.html';
 }
 
-// Get API base URL - works for both local server and direct file access
-const API_BASE = window.location.hostname
-    ? `http://${window.location.hostname}:3001`
-    : 'http://localhost:3001';
+// API_BASE is set globally by Scripts/config.js (loaded before this script)
+const API_BASE = window.API_URL || 'http://localhost:3001';
 
 // Display user email
 document.getElementById('userEmail').textContent = userDetails.email;

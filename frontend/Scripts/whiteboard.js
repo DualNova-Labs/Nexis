@@ -26,8 +26,9 @@ window.resizeCanvas = function() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
+    // FIX: Scale to new canvas size to avoid content loss on resize
     if (tempCanvas.width > 0 && tempCanvas.height > 0) {
-        ctx.drawImage(tempCanvas, 0, 0);
+        ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
     }
 
     savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -114,6 +115,9 @@ function draw(e) {
         ctx.lineWidth = STROKE_WIDTH;
     }
 
+    // Capture eraser strokes for broadcast (pen case handles it below)
+    const broadcastEraser = isEraser;
+
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -124,17 +128,17 @@ function draw(e) {
             ctx.lineTo(x, y);
             ctx.stroke();
             
-            // Broadcast pen stroke
+            // Broadcast pen/eraser stroke with normalized coords
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
                     tool: 'pen',
-                    fromX: lastX,
-                    fromY: lastY,
-                    toX: x,
-                    toY: y,
+                    fromX: lastX / canvas.width,
+                    fromY: lastY / canvas.height,
+                    toX: x / canvas.width,
+                    toY: y / canvas.height,
                     color: currentColor,
-                    lineWidth: STROKE_WIDTH,
-                    isEraser: isEraser
+                    lineWidth: broadcastEraser ? 20 : STROKE_WIDTH,
+                    isEraser: broadcastEraser
                 });
             }
             
@@ -147,17 +151,20 @@ function draw(e) {
             ctx.moveTo(startX, startY);
             ctx.lineTo(x, y);
             ctx.stroke();
+            // Shapes sync on mouseup via sendCanvasState() — NOT live per frame
+            // (sending canvas.toDataURL() every mousemove floods WebSocket with ~200KB/frame)
             break;
 
-        case 'rectangle':
+        case 'rectangle': {
             ctx.putImageData(savedState, 0, 0);
             const width = x - startX;
             const height = y - startY;
             ctx.beginPath();
             ctx.strokeRect(startX, startY, width, height);
             break;
+        }
 
-        case 'circle':
+        case 'circle': {
             ctx.putImageData(savedState, 0, 0);
             const radius = Math.sqrt(
                 Math.pow(x - startX, 2) +
@@ -167,6 +174,7 @@ function draw(e) {
             ctx.arc(startX, startY, radius, 0, Math.PI * 2);
             ctx.stroke();
             break;
+        }
     }
 }
 
