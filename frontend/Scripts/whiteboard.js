@@ -1,3 +1,4 @@
+(function() {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let isDrawing = false;
@@ -12,7 +13,7 @@ let startY = 0;
 let savedState;
 let isEraser = false;
 
-function resizeCanvas() {
+window.resizeCanvas = function() {
     const container = canvas.parentElement;
     if (!container || container.clientWidth === 0) return;
 
@@ -35,7 +36,7 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 setTimeout(resizeCanvas, 100);
 
-const toolButtons = document.querySelectorAll('.control-btn, .icon-button');
+const toolButtons = document.querySelectorAll('.control-btn, .icon-button, .wb-tool');
 toolButtons.forEach(button => {
     button.addEventListener('click', () => {
         const tool = button.getAttribute('data-tool');
@@ -65,7 +66,7 @@ toolButtons.forEach(button => {
             currentTool = tool;
         }
 
-        document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.control-btn, .wb-tool').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
     });
 });
@@ -232,3 +233,5 @@ canvas.addEventListener('touchend', (e) => {
     const mouseEvent = new MouseEvent('mouseup', {});
     canvas.dispatchEvent(mouseEvent);
 });
+
+})();

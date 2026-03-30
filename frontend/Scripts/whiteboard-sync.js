@@ -1,3 +1,4 @@
+(function() {
 // Whiteboard Sync Module - Real-time collaboration via WebSocket
 // This module handles syncing canvas state between users in the same room
 
@@ -291,3 +292,5 @@ window.broadcastDraw = broadcastDraw;
 window.broadcastClear = broadcastClear;
 window.sendCanvasState = sendCanvasState;
 window.disconnectWhiteboardSync = disconnectWhiteboardSync;
+
+})();

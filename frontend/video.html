@@ -302,12 +302,14 @@
             border: 2px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
             transition: 0.3s;
+            z-index: 30;
         }
 
         #localVideo {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform: scaleX(-1);
         }
 
         /* --- Call Controls (Bottom Bar) --- */
@@ -491,6 +493,138 @@
                 display: none;
             }
         }
+
+        /* --- Whiteboard Panel --- */
+        .v-whiteboard-panel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 50%;
+            height: calc(100% - 130px);
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+            z-index: 50;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .wb-header {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dark);
+        }
+
+        .wb-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wb-header-btn {
+            background: none;
+            border: none;
+            color: var(--text-gray);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wb-header-btn:hover {
+            background: #e8eaed;
+            color: var(--text-dark);
+        }
+
+        .wb-canvas-container {
+            flex-grow: 1;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wb-toolbar {
+            padding: 10px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .wb-tool {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            border: none;
+            background: transparent;
+            color: var(--text-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .wb-tool:hover {
+            background: #e8eaed;
+            color: var(--text-dark);
+        }
+
+        .wb-tool.active {
+            background: #e8f0fe;
+            color: var(--primary);
+        }
+
+        .wb-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .wb-color-preview {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #dadce0;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .wb-color-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -512,6 +646,11 @@
     </nav>
 
     <div class="main-container" id="selectionContainer">
+        <!-- HTTP/LAN Warning Banner -->
+        <div id="lanWarningBanner" style="display:none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; padding: 12px 20px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto 20px;">
+            <i class="material-icons-outlined" style="font-size: 20px; flex-shrink: 0;">warning</i>
+            <span><strong>Camera unavailable on HTTP.</strong> Your browser blocks camera access when using a non-localhost IP without HTTPS. A <strong>test stream</strong> will be used automatically. To use your real camera, open <em>http://localhost:8080</em> on this device.</span>
+        </div>
         <!-- Room Selection -->
         <div id="roomSelection" class="room-selection">
             <!-- Create Room Section -->
@@ -583,19 +722,73 @@
 
         <div class="v-controls-bar">
             <!-- Mic Toggle -->
-            <button id="toggleMuteBtn" class="v-ctrl-btn" title="Toggle Microphone">
-                <i class="material-icons-outlined">mic_off</i>
+            <button id="toggleMuteBtn" class="v-ctrl-btn active" title="Toggle Microphone">
+                <i class="material-icons-outlined">mic</i>
             </button>
 
             <!-- Video Toggle -->
-            <button id="toggleVideoBtn" class="v-ctrl-btn" title="Toggle Video">
-                <i class="material-icons-outlined">videocam_off</i>
+            <button id="toggleVideoBtn" class="v-ctrl-btn active" title="Toggle Video">
+                <i class="material-icons-outlined">videocam</i>
             </button>
 
             <!-- End Call -->
             <button id="endCallBtn" class="v-ctrl-btn danger" title="End Call">
                 <i class="material-icons-outlined">call_end</i>
             </button>
+
+            <!-- Whiteboard Toggle -->
+            <button id="toggleWhiteboardBtn" class="v-ctrl-btn" title="Toggle Whiteboard">
+                <i class="material-icons-outlined">gesture</i>
+            </button>
+        </div>
+
+        <!-- Whiteboard Panel (Hidden by default) -->
+        <div id="whiteboardPanel" class="v-whiteboard-panel" style="display: none;">
+            <div class="wb-header">
+                <h3><i class="material-icons-outlined" style="font-size: 18px;">draw</i> Whiteboard</h3>
+                <div class="wb-header-actions">
+                    <button class="wb-header-btn" id="hideWhiteboardBtn" title="Close">
+                        <i class="material-icons-outlined">close</i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="wb-canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div class="wb-toolbar">
+                <button class="wb-tool active" data-tool="pen" title="Pen">
+                    <i class="material-icons-outlined">edit</i>
+                </button>
+                <button class="wb-tool" data-tool="line" title="Line">
+                    <i class="material-icons-outlined">horizontal_rule</i>
+                </button>
+                <button class="wb-tool" data-tool="rectangle" title="Rectangle">
+                    <i class="material-icons-outlined">crop_square</i>
+                </button>
+                <button class="wb-tool" data-tool="circle" title="Circle">
+                    <i class="material-icons-outlined">panorama_fish_eye</i>
+                </button>
+                
+                <div class="wb-divider"></div>
+                
+                <div class="wb-color-preview" id="colorPreview" style="background: #202124;">
+                    <input type="color" class="wb-color-input" id="colorInput" value="#202124">
+                </div>
+                
+                <div class="wb-divider"></div>
+                
+                <button class="wb-tool" data-tool="eraser" title="Eraser">
+                    <i class="material-icons-outlined">ink_eraser</i>
+                </button>
+                <button class="wb-tool" data-tool="clear" title="Clear All">
+                    <i class="material-icons-outlined">delete_sweep</i>
+                </button>
+                <button class="wb-tool" data-tool="save" title="Download">
+                    <i class="material-icons-outlined">download</i>
+                </button>
+            </div>
         </div>
 
         <!-- Settings Panel (hover to show) -->
@@ -615,6 +808,9 @@
         </div>
     </div>
 
+    <!-- Whiteboard Scripts -->
+    <script src="./Scripts/whiteboard-sync.js"></script>
+    <script src="./Scripts/whiteboard.js"></script>
     <script src="./Scripts/video.js"></script>
     <script>
         function copyRoomId() {
@@ -626,35 +822,29 @@
             setTimeout(() => btn.textContent = 'content_copy', 2000);
         }
 
-        // Add visual toggles for controls
-        const muteBtn = document.getElementById('toggleMuteBtn');
-        const videoBtn = document.getElementById('toggleVideoBtn');
 
-        muteBtn.addEventListener('click', function () {
-            const icon = this.querySelector('i');
-            if (icon.textContent === 'mic') {
-                icon.textContent = 'mic_off';
-                this.classList.remove('active');
-            } else {
-                icon.textContent = 'mic';
-                this.classList.add('active');
-            }
-        });
 
-        videoBtn.addEventListener('click', function () {
-            const icon = this.querySelector('i');
-            const localVideo = document.getElementById('localVideo');
-            if (icon.textContent === 'videocam') {
-                icon.textContent = 'videocam_off';
-                this.classList.remove('active');
-                localVideo.style.opacity = '0';
-            } else {
-                icon.textContent = 'videocam';
-                this.classList.add('active');
-                localVideo.style.opacity = '1';
-                localVideo.style.background = '#3c4043';
-            }
-        });
+        // Whiteboard Toggle Logic
+        const wbBtn = document.getElementById('toggleWhiteboardBtn');
+        const wbPanel = document.getElementById('whiteboardPanel');
+        const hideWbBtn = document.getElementById('hideWhiteboardBtn');
+
+        if (wbBtn && wbPanel && hideWbBtn) {
+            wbBtn.addEventListener('click', () => {
+                const isHidden = wbPanel.style.display === 'none';
+                wbPanel.style.display = isHidden ? 'flex' : 'none';
+                wbBtn.classList.toggle('active', isHidden);
+                
+                if (isHidden && typeof resizeCanvas === 'function') {
+                    setTimeout(resizeCanvas, 100);
+                }
+            });
+
+            hideWbBtn.addEventListener('click', () => {
+                wbPanel.style.display = 'none';
+                wbBtn.classList.remove('active');
+            });
+        }
 
         // Hide/Show Navbar and Selection Container when room is entered
         // This logic should ideally be inside video.js, but adding a hook here for UI state
@@ -663,6 +853,14 @@
             document.getElementById('selectionNavbar').style.display = 'none';
             document.getElementById('selectionContainer').style.display = 'none';
             document.getElementById('videoRoom').style.display = 'flex';
+            
+            // Initialize Whiteboard Sync with current room ID
+            const newRoomIdEl = document.getElementById('newRoomId');
+            const roomId = newRoomIdEl ? newRoomIdEl.textContent : '';
+            if (typeof initWhiteboardSync === 'function' && roomId) {
+                initWhiteboardSync(roomId);
+            }
+            
             if (originalEnter) originalEnter();
         };
 
@@ -672,6 +870,14 @@
             document.getElementById('selectionNavbar').style.display = 'none';
             document.getElementById('selectionContainer').style.display = 'none';
             document.getElementById('videoRoom').style.display = 'flex';
+            
+            // Initialize Whiteboard Sync with current room ID
+            const roomIdInputEl = document.getElementById('roomIdInput');
+            const roomId = roomIdInputEl ? roomIdInputEl.value.trim() : '';
+            if (typeof initWhiteboardSync === 'function' && roomId) {
+                initWhiteboardSync(roomId);
+            }
+            
             if (originalJoin) originalJoin();
         };
     </script>
