@@ -53,13 +53,14 @@ router.get('/auth/google/success', (req, res) => {
   res.send("home page")
 })
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "https://talkies-authentication-server-1.onrender.com/auth/google/callback",
-  passReqToCallback: true,
-},
-async function (request, accessToken, refreshToken, profile, done) {
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "https://nexis-production-1666.up.railway.app/auth/google/callback",
+    passReqToCallback: true,
+  },
+  async function (request, accessToken, refreshToken, profile, done) {
   let email = profile._json.email;
   let name = profile._json.name;
   const user = new testModel({ email, name });
@@ -70,6 +71,7 @@ async function (request, accessToken, refreshToken, profile, done) {
   )
 
 );
+}
 
 
 module.exports = router;
