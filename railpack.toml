@@ -1,0 +1,7 @@
+[build]
+# Only install dependencies for the backend since frontend is on Vercel
+cmd = "cd backend && npm install"
+
+[start]
+# Start the backend server
+cmd = "cd backend && npm start"
