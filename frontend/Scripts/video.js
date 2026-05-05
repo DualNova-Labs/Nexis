@@ -149,7 +149,13 @@ function initializeWebSocket() {
 
             switch (message.type) {
                 case 'user-joined':
-                    console.log('👤 User joined:', message.email, '| I am initiator now');
+                    // Ignore our own join messages from other connections/tabs
+                    if (message.email === userDetails.email) {
+                        console.log('👤 Ignored own join message');
+                        break;
+                    }
+                    
+                    console.log('👤 Remote user joined:', message.email, '| I am initiator');
                     isInitiator = true;
                     console.log('🎬 Creating and sending offer...');
                     await createAndSendOffer();
@@ -215,6 +221,11 @@ async function createPeerConnection() {
 
         peerConnection.ontrack = (event) => {
             console.log('🎥 Received remote track:', event.track.kind, '| streams:', event.streams.length);
+            
+            if (!remoteVideo) {
+                console.error('[WebRTC] remoteVideo element not found');
+                return;
+            }
 
             if (event.streams && event.streams[0]) {
                 // Standard path: browser delivers a fully-formed stream
@@ -333,7 +344,7 @@ async function handleAnswer(answer) {
 async function handleIceCandidate(candidate) {
     try {
         if (peerConnection && peerConnection.remoteDescription) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            await peerConnection.addIceCandidate(candidate);
             console.log('Added ICE candidate');
         } else {
             // Queue the candidate if peer connection isn't ready
@@ -431,7 +442,7 @@ async function startVideoRoom(roomId) {
             }
 
             // Wait a moment for devices to be released
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             let stream;
 
@@ -501,22 +512,9 @@ async function startVideoRoom(roomId) {
 
 // Event listeners for video controls
 startCallBtn.addEventListener('click', async () => {
-    try {
-        if (isInitiator) {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            console.log('Created and set local description (offer)');
-
-            sendMessage({
-                type: 'offer',
-                offer: offer,
-                room: currentRoomId
-            });
-        }
-    } catch (error) {
-        console.error('Error starting call:', error);
-        alert('Failed to start call. Please try again.');
-    }
+    // The actual room entry is handled by enterRoom() in the HTML onclick.
+    // This listener is now a no-op or can be used for UI feedback.
+    console.log('Start Call button clicked');
 });
 
 endCallBtn.addEventListener('click', () => {
@@ -644,10 +642,6 @@ async function createAndSendOffer() {
             offerToReceiveVideo: true
         });
 
-        // Add bandwidth constraints
-        const maxBitrate = getBitrateForQuality(currentQuality);
-        offer.sdp = updateBandwidthRestriction(offer.sdp, maxBitrate);
-
         await peerConnection.setLocalDescription(offer);
 
         sendMessage({
@@ -660,38 +654,7 @@ async function createAndSendOffer() {
     }
 }
 
-// Update bandwidth restriction in SDP
-function updateBandwidthRestriction(sdp, bandwidth) {
-    let modifier = 'AS';
-    // Check if adapter is available and if browser is Firefox
-    if (typeof adapter !== 'undefined' && adapter.browserDetails && adapter.browserDetails.browser === 'firefox') {
-        bandwidth = (bandwidth >>> 0) * 1000;
-        modifier = 'TIAS';
-    }
-
-    if (sdp.indexOf('b=' + modifier + ':') === -1) {
-        // Insert b= after c= line
-        sdp = sdp.replace(/c=IN (.*)\r\n/, 'c=IN $1\r\nb=' + modifier + ':' + bandwidth + '\r\n');
-    } else {
-        sdp = sdp.replace(new RegExp('b=' + modifier + ':.*\r\n'), 'b=' + modifier + ':' + bandwidth + '\r\n');
-    }
-
-    return sdp;
-}
-
-// Get bitrate based on quality setting
-function getBitrateForQuality(quality) {
-    switch (quality) {
-        case 'high':
-            return 2500; // 2.5 Mbps
-        case 'medium':
-            return 1000; // 1 Mbps
-        case 'low':
-            return 500; // 500 Kbps
-        default:
-            return 1000;
-    }
-}
+// Note: Bandwidth restriction helpers removed to improve SDP reliability across browsers.
 
 // Change video quality
 async function changeVideoQuality(quality) {
