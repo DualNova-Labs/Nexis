@@ -166,10 +166,15 @@ function onHandResults(results) {
     outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // No hand detected - keep tracker visible but stop drawing
+        // No hand detected — if we were drawing, end the stroke cleanly.
         if (isDrawingWithHand) {
             isDrawingWithHand = false;
             if (handTracker) handTracker.classList.remove('drawing');
+            // Tell remote peers the stroke ended so their status indicator clears.
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({ type: 'stop' });
+            }
+            if (typeof sendCanvasState === 'function') sendCanvasState();
         }
         return;
     }

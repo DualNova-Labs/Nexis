@@ -189,8 +189,8 @@ function sendMessage(message) {
 function handleIncomingMessage(message) {
     switch (message.type) {
         case 'whiteboard-draw':
-            // If drawing started, and our whiteboard is closed, notify the user or highlight the button
-            if (message.type === 'whiteboard-draw' && message.drawData && message.drawData.type === 'start') {
+            // Notify UI when a remote draw stroke starts
+            if (message.drawData && message.drawData.type === 'start') {
                 notifyDrawingStarted(message.drawData.email);
             }
             handleRemoteDraw(message.drawData);
@@ -249,152 +249,164 @@ function showNotification(message, type = 'info') {
 // ──────────────────────────────────────────────────────────────
 // Remote draw handler (normalized coordinates → local pixels)
 // ──────────────────────────────────────────────────────────────
+// remoteSavedState: snapshot taken at the START of each remote stroke so that
+// line/rect/circle tools can putImageData on every mousemove frame without
+// stacking multiple preview strokes. Reset to null on 'stop'.
 let remoteSavedState = null;
-let drawingStatusTimeout = null;
 
 function handleRemoteDraw(data) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
+    // data IS the drawData object (already unwrapped by handleIncomingMessage)
     if (!ctx || !data) return;
 
     const email = data.email || 'Someone';
-    
-    // Handle status updates
+
+    // ── Lifecycle events ──────────────────────────────────────────
     if (data.type === 'start') {
         showDrawingStatus(email, true);
+        // Capture the canvas BEFORE this stroke begins so shape tools can
+        // restore it on every intermediate frame (live preview).
         remoteSavedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
         return;
     }
-    
+
     if (data.type === 'stop') {
         showDrawingStatus(email, false);
+        // After the full-state snapshot arrives we no longer need the saved state.
         remoteSavedState = null;
         return;
     }
 
-    // Default to 'draw' type for backward compatibility or direct calls
-    const drawData = data.drawData || data;
+    // ── Stroke rendering (data.type === 'draw' or legacy) ─────────
+    ctx.strokeStyle = data.color || '#202124';
+    ctx.lineWidth   = data.lineWidth || 3;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
 
-    ctx.strokeStyle = drawData.color || '#202124';
-    ctx.lineWidth = drawData.lineWidth || 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    if (drawData.isEraser) {
+    if (data.isEraser) {
         ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = drawData.lineWidth || 20;
+        ctx.lineWidth = data.lineWidth || 20;
     } else {
         ctx.globalCompositeOperation = 'source-over';
     }
 
-    // Denormalize: coordinates come in as 0–1 fractions of sender's canvas
-    const fromX  = (drawData.fromX  || 0) * canvas.width;
-    const fromY  = (drawData.fromY  || 0) * canvas.height;
-    const toX    = (drawData.toX    || 0) * canvas.width;
-    const toY    = (drawData.toY    || 0) * canvas.height;
-    const startX = (drawData.startX || 0) * canvas.width;
-    const startY = (drawData.startY || 0) * canvas.height;
+    // Denormalize: coordinates arrive as 0–1 fractions of sender's canvas.
+    const fromX  = (data.fromX  || 0) * canvas.width;
+    const fromY  = (data.fromY  || 0) * canvas.height;
+    const toX    = (data.toX    || 0) * canvas.width;
+    const toY    = (data.toY    || 0) * canvas.height;
+    const startX = (data.startX || 0) * canvas.width;
+    const startY = (data.startY || 0) * canvas.height;
 
-    switch (drawData.tool) {
-        case 'pen':
+    switch (data.tool) {
+        case 'pen': {
             ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(toX, toY);
             ctx.stroke();
             break;
-
-        case 'line':
-            if (remoteSavedState) {
-                ctx.putImageData(remoteSavedState, 0, 0);
-            }
+        }
+        case 'line': {
+            if (remoteSavedState) ctx.putImageData(remoteSavedState, 0, 0);
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(toX, toY);
             ctx.stroke();
             break;
-
-        case 'rectangle':
-            if (remoteSavedState) {
-                ctx.putImageData(remoteSavedState, 0, 0);
-            }
-            const w = (drawData.width  || 0) * canvas.width;
-            const h = (drawData.height || 0) * canvas.height;
+        }
+        case 'rectangle': {
+            if (remoteSavedState) ctx.putImageData(remoteSavedState, 0, 0);
+            const w = (data.width  || 0) * canvas.width;
+            const h = (data.height || 0) * canvas.height;
             ctx.beginPath();
             ctx.strokeRect(startX, startY, w, h);
             break;
-
-        case 'circle':
-            if (remoteSavedState) {
-                ctx.putImageData(remoteSavedState, 0, 0);
-            }
+        }
+        case 'circle': {
+            if (remoteSavedState) ctx.putImageData(remoteSavedState, 0, 0);
             const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
-            const radius  = (drawData.radius || 0) * diagLen;
+            const radius  = (data.radius || 0) * diagLen;
             ctx.beginPath();
             ctx.arc(startX, startY, radius, 0, Math.PI * 2);
             ctx.stroke();
             break;
+        }
     }
 }
+
+// Track whether the status pill is currently showing so the hide-timeout
+// doesn't accidentally hide a subsequent 'show' call.
+let _statusVisible = false;
 
 function showDrawingStatus(email, isDrawing) {
     let statusEl = document.getElementById('wb-drawing-status');
     if (!statusEl) {
         statusEl = document.createElement('div');
         statusEl.id = 'wb-drawing-status';
-        statusEl.style.cssText = `
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(26, 115, 232, 0.9);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            z-index: 100;
-            pointer-events: none;
-            display: none;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        `;
+        // Use display:flex from the start; visibility is controlled by opacity + pointer-events.
+        Object.assign(statusEl.style, {
+            position:       'absolute',
+            top:            '12px',
+            left:           '50%',
+            transform:      'translateX(-50%)',
+            background:     'rgba(26, 115, 232, 0.9)',
+            color:          'white',
+            padding:        '6px 16px',
+            borderRadius:   '20px',
+            fontSize:       '13px',
+            fontWeight:     '500',
+            zIndex:         '100',
+            pointerEvents:  'none',
+            display:        'flex',
+            alignItems:     'center',
+            gap:            '8px',
+            boxShadow:      '0 4px 12px rgba(0,0,0,0.2)',
+            transition:     'opacity 0.3s ease',
+            opacity:        '0',
+            whiteSpace:     'nowrap'
+        });
         const container = document.querySelector('.wb-canvas-container');
         if (container) container.appendChild(statusEl);
-    }
 
-    if (isDrawing) {
-        const name = email.split('@')[0];
-        statusEl.innerHTML = `<span class="material-icons-outlined" style="font-size: 16px; animation: pulse 1.5s infinite;">edit</span> ${name} is drawing...`;
-        statusEl.style.display = 'flex';
-        statusEl.style.opacity = '1';
-        
-        // Add a pulse animation if not exists
+        // Inject pulse keyframe once
         if (!document.getElementById('wb-pulse-style')) {
             const style = document.createElement('style');
             style.id = 'wb-pulse-style';
-            style.innerHTML = `
-                @keyframes pulse {
-                    0% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.2); opacity: 0.7; }
-                    100% { transform: scale(1); opacity: 1; }
+            style.textContent = `
+                @keyframes wbPulse {
+                    0%,100% { transform: scale(1); opacity: 1; }
+                    50%      { transform: scale(1.2); opacity: 0.7; }
                 }
             `;
             document.head.appendChild(style);
         }
+    }
 
-        // Highlight the remote participant video if it exists
+    if (isDrawing) {
+        _statusVisible = true;
+        const name = email.split('@')[0];
+        statusEl.innerHTML =
+            `<span class="material-icons-outlined" style="font-size:16px;animation:wbPulse 1.5s infinite;">edit</span>&nbsp;${name} is drawing…`;
+        statusEl.style.opacity = '1';
+
+        // Highlight the remote participant name tag
         const remoteTag = document.querySelector('.v-remote-tile div');
         if (remoteTag) {
             remoteTag.style.background = 'rgba(26, 115, 232, 0.8)';
-            remoteTag.innerHTML = `<span style="display:flex; align-items:center; gap:4px;"><i class="material-icons-outlined" style="font-size:14px;">draw</i> ${name} (Drawing)</span>`;
+            remoteTag.innerHTML =
+                `<span style="display:flex;align-items:center;gap:4px;">
+                    <i class="material-icons-outlined" style="font-size:14px;">draw</i> ${name} (Drawing)
+                </span>`;
         }
-
     } else {
+        _statusVisible = false;
         statusEl.style.opacity = '0';
-        setTimeout(() => { if (statusEl.style.opacity === '0') statusEl.style.display = 'none'; }, 300);
-        
+        // Only hide from layout after fade completes AND no new show() fired.
+        setTimeout(() => {
+            if (!_statusVisible) statusEl.style.opacity = '0';
+        }, 350);
+
         // Reset remote participant tag
         const remoteTag = document.querySelector('.v-remote-tile div');
         if (remoteTag) {
@@ -504,17 +516,33 @@ function disconnectWhiteboardSync() {
 }
 
 function notifyDrawingStarted(email) {
-    const name = email ? email.split('@')[0] : 'Someone';
-    
-    // Highlight the whiteboard button in video.html
+    // Highlight the whiteboard button only when the panel is closed.
     const wbBtn = document.getElementById('toggleWhiteboardBtn');
-    if (wbBtn && !wbBtn.classList.contains('active')) {
-        wbBtn.style.boxShadow = '0 0 15px #1a73e8';
-        wbBtn.innerHTML = '<i class="material-icons-outlined">gesture</i><span style="position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:#ea4335;border-radius:50%;border:2px solid #202124;"></span>';
-        
-        // Optional: Auto-open for the user if they're not active (might be intrusive, so maybe just notification)
-        // showNotification(`${name} started drawing on the whiteboard`, 'info');
+    if (!wbBtn || wbBtn.classList.contains('active')) return;
+
+    // Button needs position:relative for the badge to be positioned correctly.
+    wbBtn.style.position = 'relative';
+    wbBtn.style.boxShadow = '0 0 15px #1a73e8';
+
+    // Inject badge as a sibling element instead of innerHTML (preserves icon child).
+    let badge = document.getElementById('wb-activity-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'wb-activity-badge';
+        Object.assign(badge.style, {
+            position:     'absolute',
+            top:          '-4px',
+            right:        '-4px',
+            width:        '10px',
+            height:       '10px',
+            background:   '#ea4335',
+            borderRadius: '50%',
+            border:       '2px solid #202124',
+            pointerEvents:'none'
+        });
+        wbBtn.appendChild(badge);
     }
+    badge.style.display = 'block';
 }
 
 // ──────────────────────────────────────────────────────────────

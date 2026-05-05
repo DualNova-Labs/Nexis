@@ -84,7 +84,6 @@ if (colorInput && colorPreview) {
 }
 
 // Drawing functions
-// Drawing functions
 function startDrawing(e) {
     isDrawing = true;
     const rect = canvas.getBoundingClientRect();

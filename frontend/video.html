@@ -884,10 +884,12 @@
                 const isHidden = wbPanel.style.display === 'none';
                 wbPanel.style.display = isHidden ? 'flex' : 'none';
                 wbBtn.classList.toggle('active', isHidden);
-                
-                // Clear live indicator
+
+                // Clear the activity badge and glow whenever the panel is opened or closed
                 wbBtn.style.boxShadow = '';
-                wbBtn.innerHTML = '<i class="material-icons-outlined">gesture</i>';
+                wbBtn.style.position  = '';
+                const badge = document.getElementById('wb-activity-badge');
+                if (badge) badge.style.display = 'none';
 
                 if (isHidden && typeof resizeCanvas === 'function') {
                     setTimeout(resizeCanvas, 100);
