@@ -899,6 +899,11 @@
             hideWbBtn.addEventListener('click', () => {
                 wbPanel.style.display = 'none';
                 wbBtn.classList.remove('active');
+                // Clear activity badge and glow (same as main toggle)
+                wbBtn.style.boxShadow = '';
+                wbBtn.style.position  = '';
+                const badge = document.getElementById('wb-activity-badge');
+                if (badge) badge.style.display = 'none';
             });
         }
 
