@@ -12,7 +12,7 @@
     // --- IMPORTANT FOR PRODUCTION ---
     // Replace the value below with your actual Render backend URL
     // Example: 'https://nexis-backend.onrender.com'
-    const PRODUCTION_BACKEND_URL = 'https://nexis-production-1666.up.railway.app';
+    const PRODUCTION_BACKEND_URL = 'https://nexis-production-0c40.up.railway.app';
 
     if (isLocalhost) {
         window.API_URL = 'http://localhost:3001';
