@@ -84,6 +84,7 @@ if (colorInput && colorPreview) {
 }
 
 // Drawing functions
+// Drawing functions
 function startDrawing(e) {
     isDrawing = true;
     const rect = canvas.getBoundingClientRect();
@@ -94,8 +95,17 @@ function startDrawing(e) {
     [startX, startY] = [x, y];
 
     // Save the current canvas state when starting to draw
-    if (currentTool !== 'pen') {
-        savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Notify others that we started drawing (for 'User is drawing...' indicator)
+    if (typeof broadcastDraw === 'function') {
+        broadcastDraw({
+            type: 'start',
+            tool: currentTool,
+            x: x / canvas.width,
+            y: y / canvas.height,
+            color: currentColor
+        });
     }
 }
 
@@ -115,11 +125,15 @@ function draw(e) {
         ctx.lineWidth = STROKE_WIDTH;
     }
 
-    // Capture eraser strokes for broadcast (pen case handles it below)
-    const broadcastEraser = isEraser;
-
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    const normalizedX = x / canvas.width;
+    const normalizedY = y / canvas.height;
+    const normalizedLastX = lastX / canvas.width;
+    const normalizedLastY = lastY / canvas.height;
+    const normalizedStartX = startX / canvas.width;
+    const normalizedStartY = startY / canvas.height;
 
     switch (currentTool) {
         case 'pen':
@@ -131,14 +145,15 @@ function draw(e) {
             // Broadcast pen/eraser stroke with normalized coords
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
+                    type: 'draw',
                     tool: 'pen',
-                    fromX: lastX / canvas.width,
-                    fromY: lastY / canvas.height,
-                    toX: x / canvas.width,
-                    toY: y / canvas.height,
+                    fromX: normalizedLastX,
+                    fromY: normalizedLastY,
+                    toX: normalizedX,
+                    toY: normalizedY,
                     color: currentColor,
-                    lineWidth: broadcastEraser ? 20 : STROKE_WIDTH,
-                    isEraser: broadcastEraser
+                    lineWidth: isEraser ? 20 : STROKE_WIDTH,
+                    isEraser: isEraser
                 });
             }
             
@@ -151,8 +166,19 @@ function draw(e) {
             ctx.moveTo(startX, startY);
             ctx.lineTo(x, y);
             ctx.stroke();
-            // Shapes sync on mouseup via sendCanvasState() — NOT live per frame
-            // (sending canvas.toDataURL() every mousemove floods WebSocket with ~200KB/frame)
+            
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    type: 'draw',
+                    tool: 'line',
+                    startX: normalizedStartX,
+                    startY: normalizedStartY,
+                    toX: normalizedX,
+                    toY: normalizedY,
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH
+                });
+            }
             break;
 
         case 'rectangle': {
@@ -161,6 +187,19 @@ function draw(e) {
             const height = y - startY;
             ctx.beginPath();
             ctx.strokeRect(startX, startY, width, height);
+            
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    type: 'draw',
+                    tool: 'rectangle',
+                    startX: normalizedStartX,
+                    startY: normalizedStartY,
+                    width: width / canvas.width,
+                    height: height / canvas.height,
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH
+                });
+            }
             break;
         }
 
@@ -173,6 +212,19 @@ function draw(e) {
             ctx.beginPath();
             ctx.arc(startX, startY, radius, 0, Math.PI * 2);
             ctx.stroke();
+            
+            if (typeof broadcastDraw === 'function') {
+                const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
+                broadcastDraw({
+                    type: 'draw',
+                    tool: 'circle',
+                    startX: normalizedStartX,
+                    startY: normalizedStartY,
+                    radius: radius / diagLen,
+                    color: currentColor,
+                    lineWidth: STROKE_WIDTH
+                });
+            }
             break;
         }
     }
@@ -185,8 +237,13 @@ function stopDrawing() {
     // Save the final state after drawing is complete
     savedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Send full canvas state after drawing completes (for shapes)
-    if (currentTool !== 'pen' && typeof sendCanvasState === 'function') {
+    // Notify others that we stopped drawing
+    if (typeof broadcastDraw === 'function') {
+        broadcastDraw({ type: 'stop' });
+    }
+
+    // Send full canvas state after drawing completes to ensure consistency
+    if (typeof sendCanvasState === 'function') {
         sendCanvasState();
     }
 }

@@ -235,6 +235,17 @@ function onHandResults(results) {
             // Start a new path on the main canvas
             mainCtx.beginPath();
             mainCtx.moveTo(smoothedX, smoothedY);
+
+            // Broadcast start
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({
+                    type: 'start',
+                    tool: 'pen',
+                    x: smoothedX / canvasRect.width,
+                    y: smoothedY / canvasRect.height,
+                    color: window.currentColor || '#202124'
+                });
+            }
         } else {
             // Continue drawing — guard for detached context
             if (!mainCtx) { mainCtx = mainCanvas ? mainCanvas.getContext('2d') : null; }
@@ -243,9 +254,9 @@ function onHandResults(results) {
             mainCtx.stroke();
             
             // FIX: Normalize against canvasRect dimensions (CSS pixels) not canvas.width (buffer pixels)
-            // canvasRect.width matches the coordinate space of smoothedX/smoothedY
             if (typeof broadcastDraw === 'function') {
                 broadcastDraw({
+                    type: 'draw',
                     tool: 'pen',
                     fromX: lastHandPosition.x / canvasRect.width,
                     fromY: lastHandPosition.y / canvasRect.height,
@@ -265,6 +276,12 @@ function onHandResults(results) {
             // Stop drawing - send final canvas state for perfect sync
             isDrawingWithHand = false;
             if (handTracker) handTracker.classList.remove('drawing');
+            
+            // Broadcast stop
+            if (typeof broadcastDraw === 'function') {
+                broadcastDraw({ type: 'stop' });
+            }
+
             if (typeof sendCanvasState === 'function') sendCanvasState();
         }
     }

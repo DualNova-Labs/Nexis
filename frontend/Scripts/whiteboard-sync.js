@@ -189,6 +189,10 @@ function sendMessage(message) {
 function handleIncomingMessage(message) {
     switch (message.type) {
         case 'whiteboard-draw':
+            // If drawing started, and our whiteboard is closed, notify the user or highlight the button
+            if (message.type === 'whiteboard-draw' && message.drawData && message.drawData.type === 'start') {
+                notifyDrawingStarted(message.drawData.email);
+            }
             handleRemoteDraw(message.drawData);
             break;
         case 'whiteboard-state':
@@ -245,10 +249,31 @@ function showNotification(message, type = 'info') {
 // ──────────────────────────────────────────────────────────────
 // Remote draw handler (normalized coordinates → local pixels)
 // ──────────────────────────────────────────────────────────────
-function handleRemoteDraw(drawData) {
+let remoteSavedState = null;
+let drawingStatusTimeout = null;
+
+function handleRemoteDraw(data) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
-    if (!ctx || !drawData) return;
+    if (!ctx || !data) return;
+
+    const email = data.email || 'Someone';
+    
+    // Handle status updates
+    if (data.type === 'start') {
+        showDrawingStatus(email, true);
+        remoteSavedState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    
+    if (data.type === 'stop') {
+        showDrawingStatus(email, false);
+        remoteSavedState = null;
+        return;
+    }
+
+    // Default to 'draw' type for backward compatibility or direct calls
+    const drawData = data.drawData || data;
 
     ctx.strokeStyle = drawData.color || '#202124';
     ctx.lineWidth = drawData.lineWidth || 3;
@@ -279,60 +304,103 @@ function handleRemoteDraw(drawData) {
             break;
 
         case 'line':
-            if (drawData.savedState) {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    ctx.strokeStyle = drawData.color || '#202124';
-                    ctx.lineWidth = drawData.lineWidth || 3;
-                    ctx.lineCap = 'round';
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.beginPath();
-                    ctx.moveTo(startX, startY);
-                    ctx.lineTo(toX, toY);
-                    ctx.stroke();
-                };
-                img.src = drawData.savedState;
+            if (remoteSavedState) {
+                ctx.putImageData(remoteSavedState, 0, 0);
             }
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
             break;
 
         case 'rectangle':
-            if (drawData.savedState) {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    ctx.strokeStyle = drawData.color || '#202124';
-                    ctx.lineWidth = drawData.lineWidth || 3;
-                    ctx.globalCompositeOperation = 'source-over';
-                    const w = (drawData.width  || 0) * canvas.width;
-                    const h = (drawData.height || 0) * canvas.height;
-                    ctx.beginPath();
-                    ctx.strokeRect(startX, startY, w, h);
-                };
-                img.src = drawData.savedState;
+            if (remoteSavedState) {
+                ctx.putImageData(remoteSavedState, 0, 0);
             }
+            const w = (drawData.width  || 0) * canvas.width;
+            const h = (drawData.height || 0) * canvas.height;
+            ctx.beginPath();
+            ctx.strokeRect(startX, startY, w, h);
             break;
 
         case 'circle':
-            if (drawData.savedState) {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    ctx.strokeStyle = drawData.color || '#202124';
-                    ctx.lineWidth = drawData.lineWidth || 3;
-                    ctx.globalCompositeOperation = 'source-over';
-                    const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
-                    const radius  = (drawData.radius || 0) * diagLen;
-                    ctx.beginPath();
-                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
-                    ctx.stroke();
-                };
-                img.src = drawData.savedState;
+            if (remoteSavedState) {
+                ctx.putImageData(remoteSavedState, 0, 0);
             }
+            const diagLen = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(2);
+            const radius  = (drawData.radius || 0) * diagLen;
+            ctx.beginPath();
+            ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+            ctx.stroke();
             break;
+    }
+}
+
+function showDrawingStatus(email, isDrawing) {
+    let statusEl = document.getElementById('wb-drawing-status');
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'wb-drawing-status';
+        statusEl.style.cssText = `
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 115, 232, 0.9);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        `;
+        const container = document.querySelector('.wb-canvas-container');
+        if (container) container.appendChild(statusEl);
+    }
+
+    if (isDrawing) {
+        const name = email.split('@')[0];
+        statusEl.innerHTML = `<span class="material-icons-outlined" style="font-size: 16px; animation: pulse 1.5s infinite;">edit</span> ${name} is drawing...`;
+        statusEl.style.display = 'flex';
+        statusEl.style.opacity = '1';
+        
+        // Add a pulse animation if not exists
+        if (!document.getElementById('wb-pulse-style')) {
+            const style = document.createElement('style');
+            style.id = 'wb-pulse-style';
+            style.innerHTML = `
+                @keyframes pulse {
+                    0% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.2); opacity: 0.7; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Highlight the remote participant video if it exists
+        const remoteTag = document.querySelector('.v-remote-tile div');
+        if (remoteTag) {
+            remoteTag.style.background = 'rgba(26, 115, 232, 0.8)';
+            remoteTag.innerHTML = `<span style="display:flex; align-items:center; gap:4px;"><i class="material-icons-outlined" style="font-size:14px;">draw</i> ${name} (Drawing)</span>`;
+        }
+
+    } else {
+        statusEl.style.opacity = '0';
+        setTimeout(() => { if (statusEl.style.opacity === '0') statusEl.style.display = 'none'; }, 300);
+        
+        // Reset remote participant tag
+        const remoteTag = document.querySelector('.v-remote-tile div');
+        if (remoteTag) {
+            remoteTag.style.background = 'rgba(0,0,0,0.5)';
+            remoteTag.textContent = 'Remote Participant';
+        }
     }
 }
 
@@ -395,7 +463,11 @@ function sendCanvasState() {
 // ──────────────────────────────────────────────────────────────
 function broadcastDraw(drawData) {
     if (!currentRoom) return;
-    sendMessage({ type: 'whiteboard-draw', room: currentRoom, drawData });
+    sendMessage({ 
+        type: 'whiteboard-draw', 
+        room: currentRoom, 
+        drawData: { ...drawData, email: getUserEmail() } 
+    });
 }
 
 function broadcastClear() {
@@ -429,6 +501,20 @@ function disconnectWhiteboardSync() {
     isConnected = false;
     currentRoom = null;
     setConnectionStatus('disconnected');
+}
+
+function notifyDrawingStarted(email) {
+    const name = email ? email.split('@')[0] : 'Someone';
+    
+    // Highlight the whiteboard button in video.html
+    const wbBtn = document.getElementById('toggleWhiteboardBtn');
+    if (wbBtn && !wbBtn.classList.contains('active')) {
+        wbBtn.style.boxShadow = '0 0 15px #1a73e8';
+        wbBtn.innerHTML = '<i class="material-icons-outlined">gesture</i><span style="position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:#ea4335;border-radius:50%;border:2px solid #202124;"></span>';
+        
+        // Optional: Auto-open for the user if they're not active (might be intrusive, so maybe just notification)
+        // showNotification(`${name} started drawing on the whiteboard`, 'info');
+    }
 }
 
 // ──────────────────────────────────────────────────────────────
