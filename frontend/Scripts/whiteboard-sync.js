@@ -204,7 +204,7 @@ function handleIncomingMessage(message) {
         case 'whiteboard-request-state':
             handleStateRequest();
             break;
-        case 'user-joined': {
+        case 'whiteboard-user-joined': {
             const email = message.email || 'Someone';
             if (email !== getUserEmail()) {
                 console.log(`[WB-Sync] ${email} joined`);
@@ -214,7 +214,7 @@ function handleIncomingMessage(message) {
             }
             break;
         }
-        case 'user-left': {
+        case 'whiteboard-user-left': {
             const email = message.email || 'Someone';
             console.log(`[WB-Sync] ${email} left`);
             showNotification(`${email.split('@')[0]} left the whiteboard`, 'info');

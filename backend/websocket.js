@@ -299,7 +299,7 @@ function setupWebSocket(server) {
     function handleDisconnect(ws) {
         const clientInfo = clients.get(ws);
         if (clientInfo) {
-            const { room, email } = clientInfo;
+            const { room, email, type } = clientInfo;
             
             // Remove from room
             if (rooms.has(room)) {
@@ -309,15 +309,18 @@ function setupWebSocket(server) {
                 }
             }
             
-            // Notify others
-            broadcastToRoom(room, {
-                type: 'user-left',
-                email: email
-            }, ws);
+            // Only broadcast WebRTC 'user-left' for video clients, not whiteboard-only clients.
+            // Whiteboard clients disconnecting should not tear down the peer connection.
+            if (type !== 'whiteboard') {
+                broadcastToRoom(room, {
+                    type: 'user-left',
+                    email: email
+                }, ws);
+            }
             
             // Clean up
             clients.delete(ws);
-            console.log(`User ${email} disconnected from room ${room}`);
+            console.log(`User ${email} (${type || 'video'}) disconnected from room ${room}`);
         }
     }
     
@@ -349,10 +352,12 @@ function setupWebSocket(server) {
         const { room } = message;
         console.log(`User joining whiteboard room ${room}`);
         
-        // Store client info for whiteboard
-        clients.set(ws, { room, email: message.email || 'anonymous', reconnectAttempts: 0 });
+        // Store client info for whiteboard — tag with type:'whiteboard' so
+        // handleDisconnect knows NOT to broadcast WebRTC 'user-left' for this WS.
+        clients.set(ws, { room, email: message.email || 'anonymous', type: 'whiteboard', reconnectAttempts: 0 });
         
-        // Add to room
+        // Add to room (shared rooms map is fine — whiteboard needs to receive
+        // whiteboard-draw / whiteboard-state broadcasts)
         if (!rooms.has(room)) {
             rooms.set(room, new Set());
         }
@@ -368,9 +373,11 @@ function setupWebSocket(server) {
             console.log(`Sent existing whiteboard state to new user in room ${room}`);
         }
         
-        // Notify others
+        // CRITICAL FIX: Use 'whiteboard-user-joined' NOT 'user-joined'.
+        // 'user-joined' is reserved for WebRTC signaling — receiving it causes
+        // video.js to call createAndSendOffer() which corrupts the peer connection.
         broadcastToRoom(room, {
-            type: 'user-joined',
+            type: 'whiteboard-user-joined',
             email: message.email || 'anonymous'
         }, ws);
     }

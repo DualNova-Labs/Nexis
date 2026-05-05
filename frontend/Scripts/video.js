@@ -214,11 +214,30 @@ async function createPeerConnection() {
         };
 
         peerConnection.ontrack = (event) => {
-            console.log('Received remote track:', event.streams[0]);
-            if (remoteVideo.srcObject !== event.streams[0]) {
-                remoteVideo.srcObject = event.streams[0];
-                console.log('Set remote video stream');
+            console.log('🎥 Received remote track:', event.track.kind, '| streams:', event.streams.length);
+
+            if (event.streams && event.streams[0]) {
+                // Standard path: browser delivers a fully-formed stream
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    console.log('[WebRTC] Set remote video stream from event.streams[0]');
+                }
+            } else {
+                // Fallback path (some TURN relay scenarios): stream container is absent,
+                // tracks arrive individually — build a MediaStream manually.
+                if (!remoteVideo.srcObject) {
+                    remoteVideo.srcObject = new MediaStream();
+                    console.log('[WebRTC] Created new MediaStream for individual tracks');
+                }
+                remoteVideo.srcObject.addTrack(event.track);
+                console.log('[WebRTC] Added individual track to remote stream:', event.track.kind);
             }
+
+            // Explicitly call play() — some browsers won't autoplay without a user gesture
+            // recorded earlier; this is a no-op if already playing.
+            remoteVideo.play().catch(err => {
+                console.warn('[WebRTC] remoteVideo.play() suppressed (autoplay policy):', err.message);
+            });
         };
 
         peerConnection.oniceconnectionstatechange = () => {
@@ -453,7 +472,7 @@ async function startVideoRoom(roomId) {
                 localVideo.srcObject = stream;
 
                 roomSelection.style.display = 'none';
-                videoRoom.style.display = 'block';
+                videoRoom.style.display = 'flex';
                 roomIdSpan.textContent = roomId;
 
                 await createPeerConnection();
